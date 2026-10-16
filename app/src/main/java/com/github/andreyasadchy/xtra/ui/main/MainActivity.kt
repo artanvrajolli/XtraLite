@@ -23,6 +23,7 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.os.ext.SdkExtensions
 import android.text.format.Formatter
+import android.util.Log
 import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
@@ -95,8 +96,11 @@ import com.github.andreyasadchy.xtra.util.applyTheme
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.tokenPrefs
+import com.google.android.gms.cast.MediaMetadata
 import com.google.android.gms.cast.framework.CastContext
-import com.google.android.gms.cast.framework.media.widget.MiniControllerFragment
+import com.google.android.gms.cast.framework.media.ImageHints
+import com.google.android.gms.cast.framework.media.ImagePicker
+import com.google.android.gms.cast.framework.media.uicontroller.UIMediaController
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.material.color.MaterialColors
@@ -108,6 +112,8 @@ import java.util.concurrent.TimeUnit
 import kotlin.concurrent.schedule
 
 class MainActivity : AppCompatActivity() {
+
+    private var castUiController: UIMediaController? = null
 
     companion object {
         const val KEY_VIDEO = "video"
@@ -158,15 +164,7 @@ class MainActivity : AppCompatActivity() {
         applyTheme()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this) == ConnectionResult.SUCCESS) {
-            CastContext.getSharedInstance(this, ContextCompat.getMainExecutor(this)).addOnSuccessListener { castContext ->
-                CastManager.init(castContext)
-                // "now casting" bar above the navigation bar; hides itself when nothing is cast
-                if (!isFinishing && !supportFragmentManager.isStateSaved && supportFragmentManager.findFragmentById(R.id.castMiniController) == null) {
-                    supportFragmentManager.beginTransaction().replace(R.id.castMiniController, MiniControllerFragment()).commit()
-                }
-            }
-        }
+        setUpCast()
         setNavBarColor(resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT)
         val ignoreCutouts = prefs.getBoolean(C.UI_DRAW_BEHIND_CUTOUTS, false)
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, windowInsets ->
@@ -645,7 +643,46 @@ class MainActivity : AppCompatActivity() {
         restorePlayerFragment()
     }
 
+    private fun setUpCast() {
+        // casting is optional: never let a Cast SDK problem stop the app from starting
+        try {
+            if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this) == ConnectionResult.SUCCESS) {
+                CastContext.getSharedInstance(this, ContextCompat.getMainExecutor(this)).addOnSuccessListener { castContext ->
+                    if (!isDestroyed) {
+                        try {
+                            CastManager.init(castContext)
+                            bindCastMiniController()
+                        } catch (e: Exception) {
+                            Log.e("MainActivity", "Cast setup failed", e)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Cast setup failed", e)
+        }
+    }
+
+    /** "Now casting" bar above the navigation bar; the Cast SDK shows it only while something is cast. */
+    private fun bindCastMiniController() {
+        val bar = binding.castMiniController
+        val density = resources.displayMetrics.density
+        castUiController = UIMediaController(this).apply {
+            bindViewVisibilityToMediaSession(bar.root, View.GONE)
+            bindTextViewToMetadataOfCurrentItem(bar.castMiniTitle, MediaMetadata.KEY_TITLE)
+            bindTextViewToMetadataOfCurrentItem(bar.castMiniSubtitle, MediaMetadata.KEY_SUBTITLE)
+            bindImageViewToImageOfCurrentItem(bar.castMiniImage, ImageHints(ImagePicker.IMAGE_TYPE_MINI_CONTROLLER_THUMBNAIL, (64 * density).toInt(), (36 * density).toInt()), 0)
+            val play = ContextCompat.getDrawable(this@MainActivity, R.drawable.baseline_play_arrow_black_48)!!
+            val pause = ContextCompat.getDrawable(this@MainActivity, R.drawable.baseline_pause_black_48)!!
+            bindImageViewToPlayPauseToggle(bar.castMiniPlayPause, play, pause, pause, null, false)
+            bindProgressBar(bar.castMiniProgress)
+            bindViewToLaunchExpandedController(bar.root)
+        }
+    }
+
     override fun onDestroy() {
+        castUiController?.dispose()
+        castUiController = null
         networkCallback?.let {
             val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
             connectivityManager.unregisterNetworkCallback(it)

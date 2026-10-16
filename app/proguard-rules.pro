@@ -34,6 +34,7 @@
 }
 
 -keep class com.github.andreyasadchy.xtra.util.CastOptionsProvider { *; }
+-keep class androidx.mediarouter.app.MediaRouteActionProvider { *; }
 
 -keep class androidx.work.impl.WorkDatabase_Impl {
     <init>();

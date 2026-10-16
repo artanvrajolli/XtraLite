@@ -40,7 +40,10 @@ class XtraApp : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         INSTANCE = this
         xtraModule = XtraModule(this)
-        AppIcons.ensureLauncherEntry(this)
+        try {
+            AppIcons.ensureLauncherEntry(this)
+        } catch (e: Exception) {
+        }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             val conscrypt = Conscrypt.newProvider()
             Security.insertProviderAt(conscrypt, 1)

@@ -1,7 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <style name="BaseDarkTheme" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="castMiniControllerStyle">@style/XtraCastMiniController</item>
         <item name="colorPrimary">@color/primaryBlue</item>
         <item name="chatStatus">@color/chatStatusDark</item>
         <item name="sortBarTextColor">?android:textColorSecondary</item>
@@ -25,7 +24,6 @@
     </style>
 
     <style name="BaseLightTheme" parent="Theme.Material3.Light.NoActionBar">
-        <item name="castMiniControllerStyle">@style/XtraCastMiniController</item>
         <item name="colorPrimary">@color/accent</item>
         <item name="chatStatus">@color/chatStatusLight</item>
         <item name="sortBarTextColor">?android:textColorSecondary</item>
@@ -51,7 +49,6 @@
     </style>
 
     <style name="BaseAmoledTheme" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="castMiniControllerStyle">@style/XtraCastMiniController</item>
         <item name="colorPrimary">@android:color/white</item>
         <item name="colorSurface">@color/surfaceAmoled</item>
         <item name="android:colorBackground">@color/surfaceAmoled</item>
@@ -82,7 +79,6 @@
     </style>
 
     <style name="BaseBlueTheme" parent="Theme.Material3.Dark.NoActionBar">
-        <item name="castMiniControllerStyle">@style/XtraCastMiniController</item>
         <item name="colorPrimary">@color/primaryBlue</item>
         <item name="colorSurface">@color/surfaceBlue</item>
         <item name="android:colorBackground">@color/surfaceBlue</item>
@@ -1218,7 +1214,6 @@
     </style>
 
     <style name="BaseAppCompatDarkTheme" parent="Theme.AppCompat.NoActionBar">
-        <item name="castMiniControllerStyle">@style/XtraCastMiniController</item>
         <item name="colorAccent">@color/accent</item>
         <item name="colorPrimary">@color/accent</item>
         <item name="colorSurface">@color/surfaceDark</item>
@@ -1279,7 +1274,6 @@
     </style>
 
     <style name="BaseAppCompatLightTheme" parent="Theme.AppCompat.Light.NoActionBar">
-        <item name="castMiniControllerStyle">@style/XtraCastMiniController</item>
         <item name="colorAccent">@color/accent</item>
         <item name="colorPrimary">@color/accent</item>
         <item name="colorSurface">@android:color/white</item>
@@ -1342,7 +1336,6 @@
     </style>
 
     <style name="BaseAppCompatAmoledTheme" parent="Theme.AppCompat.NoActionBar">
-        <item name="castMiniControllerStyle">@style/XtraCastMiniController</item>
         <item name="colorAccent">@android:color/white</item>
         <item name="colorPrimary">@android:color/white</item>
         <item name="colorSurface">@android:color/black</item>
@@ -1403,7 +1396,6 @@
     </style>
 
     <style name="BaseAppCompatBlueTheme" parent="Theme.AppCompat.NoActionBar">
-        <item name="castMiniControllerStyle">@style/XtraCastMiniController</item>
         <item name="colorAccent">@color/accent</item>
         <item name="colorPrimary">@color/accent</item>
         <item name="colorSurface">@color/surfaceBlue</item>
@@ -1618,12 +1610,4 @@
     </style>
 
 
-    <style name="XtraCastMiniController" parent="CastMiniController">
-        <item name="castShowImageThumbnail">true</item>
-        <item name="castBackground">?android:colorBackground</item>
-        <item name="castButtonColor">?android:textColorPrimary</item>
-        <item name="castProgressBarColor">?attr/colorPrimary</item>
-        <item name="castTitleTextAppearance">@style/TextAppearance.AppCompat.Subhead</item>
-        <item name="castSubtitleTextAppearance">@style/TextAppearance.AppCompat.Caption</item>
-    </style>
 </resources>

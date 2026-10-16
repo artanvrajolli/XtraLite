@@ -29,11 +29,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
-        <!-- MiniControllerFragment is added at runtime when Google Play services is available -->
-        <FrameLayout
+        <!-- "now casting" bar, bound to the Cast SDK in MainActivity; hidden unless something is cast -->
+        <include
             android:id="@+id/castMiniController"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            layout="@layout/cast_mini_controller" />
 
         <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/navBar"
