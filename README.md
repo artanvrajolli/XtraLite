@@ -1,6 +1,6 @@
 # XtraLite for Twitch
 
-<img src="https://github.com/AndreyAsadchy/Xtra/blob/197ba90cac879abd2a5645393ce361847f12fa0b/app/src/main/ic_launcher-web.png" align="left" width="100"/>
+<img src="app/src/main/ic_launcher-web.png" align="left" width="100"/>
 
 XtraLite is a lightweight Twitch player and browser for Android, based on [Xtra](https://github.com/crackededed/Xtra).
 
