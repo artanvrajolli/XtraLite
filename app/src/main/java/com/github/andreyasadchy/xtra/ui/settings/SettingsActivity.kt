@@ -53,6 +53,7 @@ import androidx.preference.PreferenceManager
 import androidx.preference.SeekBarPreference
 import androidx.preference.SwitchPreferenceCompat
 import androidx.preference.forEach
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -64,6 +65,7 @@ import com.github.andreyasadchy.xtra.model.ui.SettingsDragListItem
 import com.github.andreyasadchy.xtra.model.ui.SettingsSearchItem
 import com.github.andreyasadchy.xtra.ui.common.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.settings.SettingsViewModel.Companion.SettingsViewModelFactory
+import com.github.andreyasadchy.xtra.util.AppIcons
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.applyTheme
@@ -590,6 +592,28 @@ class SettingsActivity : AppCompatActivity() {
     class ThemeSettingsFragment : MaterialPreferenceFragment() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.theme_preferences, rootKey)
+            findPreference<Preference>("app_icon")?.apply {
+                summary = getString(AppIcons.getCurrent(requireContext()).label)
+                setOnPreferenceClickListener { preference ->
+                    val recyclerView = RecyclerView(requireContext()).apply {
+                        layoutManager = GridLayoutManager(requireContext(), 4)
+                        val padding = (16 * resources.displayMetrics.density).toInt()
+                        setPadding(padding, padding / 2, padding, 0)
+                        clipToPadding = false
+                        adapter = AppIconAdapter(AppIcons.getCurrent(requireContext())) { icon ->
+                            AppIcons.setCurrent(requireContext(), icon)
+                            preference.summary = getString(icon.label)
+                        }
+                    }
+                    requireContext().getAlertDialogBuilder()
+                        .setTitle(R.string.app_icon)
+                        .setMessage(R.string.app_icon_message)
+                        .setView(recyclerView)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                    true
+                }
+            }
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                 findPreference<ListPreference>(C.THEME)?.apply {
                     setEntries(R.array.themeNoDynamicEntries)

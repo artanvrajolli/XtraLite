@@ -57,6 +57,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.TimeBar
 import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.databinding.FragmentPlayerBinding
 import com.github.andreyasadchy.xtra.model.VideoQuality
 import com.github.andreyasadchy.xtra.model.ui.Video
@@ -70,10 +71,13 @@ import com.github.andreyasadchy.xtra.ui.game.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel.Companion.PlayerViewModelFactory
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.CastProxyServer
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.tokenPrefs
+import com.google.android.gms.cast.HlsSegmentFormat
+import com.google.android.gms.cast.HlsVideoSegmentFormat
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaLoadRequestData
 import com.google.android.gms.cast.MediaMetadata
@@ -1038,11 +1042,28 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
     }
 
     private fun startCasting(session: CastSession, showError: Boolean) {
-        val url = getCastUrl()
+        val castContext = castContext
+        val sourceUrl = when (playbackService?.type) {
+            BasePlaybackService.STREAM, BasePlaybackService.VIDEO -> playbackService?.playlistUrl ?: getCastUrl()
+            else -> getCastUrl()
+        }
         val remoteMediaClient = session.remoteMediaClient
-        if (url == null || remoteMediaClient == null) {
+        if (sourceUrl == null || remoteMediaClient == null || castContext == null) {
             if (showError) {
                 Toast.makeText(requireContext(), R.string.cast_video_unavailable, Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
+        val isHls = sourceUrl.toUri().path?.endsWith(".mp4") != true
+        val url = if (isHls) {
+            // Twitch playlists don't allow the receiver's origin, so they are relayed through this device
+            CastProxyServer.wrap(requireContext(), castContext, (requireContext().applicationContext as XtraApp).xtraModule.okHttpClient.value, sourceUrl)
+        } else {
+            sourceUrl
+        }
+        if (url == null) {
+            if (showError) {
+                Toast.makeText(requireContext(), R.string.cast_no_local_network, Toast.LENGTH_LONG).show()
             }
             return
         }
@@ -1059,11 +1080,19 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                 addImage(WebImage(thumbnail.toUri()))
             }
         }
-        val mediaInfo = MediaInfo.Builder(url)
-            .setStreamType(if (isLive) MediaInfo.STREAM_TYPE_LIVE else MediaInfo.STREAM_TYPE_BUFFERED)
-            .setContentType(if (url.toUri().path?.endsWith(".mp4") == true) MimeTypes.VIDEO_MP4 else MimeTypes.APPLICATION_M3U8)
-            .setMetadata(metadata)
-            .build()
+        val mediaInfo = MediaInfo.Builder(url).apply {
+            setContentUrl(url)
+            setStreamType(if (isLive) MediaInfo.STREAM_TYPE_LIVE else MediaInfo.STREAM_TYPE_BUFFERED)
+            setMetadata(metadata)
+            if (isHls) {
+                setContentType(MimeTypes.APPLICATION_M3U8)
+                // the relay only offers H.264 variants, which Twitch serves as MPEG-TS
+                setHlsSegmentFormat(HlsSegmentFormat.TS)
+                setHlsVideoSegmentFormat(HlsVideoSegmentFormat.MPEG2_TS)
+            } else {
+                setContentType(MimeTypes.VIDEO_MP4)
+            }
+        }.build()
         remoteMediaClient.load(
             MediaLoadRequestData.Builder().apply {
                 setMediaInfo(mediaInfo)
@@ -1072,7 +1101,11 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                     getCurrentPosition()?.let { setCurrentTime(it) }
                 }
             }.build()
-        )
+        ).setResultCallback { result ->
+            if (!result.status.isSuccess && context != null) {
+                Toast.makeText(requireContext(), getString(R.string.cast_load_failed, result.status.statusCode), Toast.LENGTH_LONG).show()
+            }
+        }
         pausePlayback()
     }
 
