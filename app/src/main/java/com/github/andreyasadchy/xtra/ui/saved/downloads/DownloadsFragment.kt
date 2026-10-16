@@ -60,7 +60,6 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
     private lateinit var pagingAdapter: PagingDataAdapter<OfflineVideo, out RecyclerView.ViewHolder>
     override var enableNetworkCheck = false
     private var fileResultLauncher: ActivityResultLauncher<Intent>? = null
-    private var chatFileResultLauncher: ActivityResultLauncher<Intent>? = null
     private var videoDownloadService: VideoDownloadService? = null
     private var videoDownloadServiceConnection: ServiceConnection? = null
     private var streamDownloadService: StreamDownloadService? = null
@@ -74,16 +73,6 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
                     viewModel.selectedVideo?.let { video ->
                         requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                         viewModel.moveToSharedStorage(it, video)
-                    }
-                }
-            }
-        }
-        chatFileResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                result.data?.data?.let {
-                    viewModel.selectedVideo?.let { video ->
-                        requireContext().contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-                        viewModel.updateChatUrl(it, video)
                     }
                 }
             }
@@ -220,13 +209,6 @@ class DownloadsFragment : PagedListFragment(), Scrollable {
                     viewModel.selectedVideo = it
                     fileResultLauncher?.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE))
                 }
-            },
-            updateChatUrl = {
-                viewModel.selectedVideo = it
-                chatFileResultLauncher?.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "*/*"
-                })
             },
             shareVideo = {
                 it.url?.let { videoUrl ->

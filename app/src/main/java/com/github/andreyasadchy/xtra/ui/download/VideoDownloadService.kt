@@ -15,9 +15,6 @@ import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.provider.DocumentsContract
-import android.util.Base64
-import android.util.JsonReader
-import android.util.JsonToken
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -26,17 +23,12 @@ import androidx.lifecycle.lifecycleScope
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.XtraModule
-import com.github.andreyasadchy.xtra.model.chat.CheerEmote
-import com.github.andreyasadchy.xtra.model.chat.Emote
-import com.github.andreyasadchy.xtra.model.chat.TwitchBadge
-import com.github.andreyasadchy.xtra.model.chat.TwitchEmote
 import com.github.andreyasadchy.xtra.model.ui.DownloadProgress
 import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.NetworkUtils
 import com.github.andreyasadchy.xtra.util.NetworkUtils.executeAsync
-import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.m3u8.MediaPlaylist
 import com.github.andreyasadchy.xtra.util.m3u8.PlaylistUtils
 import com.github.andreyasadchy.xtra.util.m3u8.Segment
@@ -54,11 +46,8 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import okhttp3.Request
 import java.io.File
-import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
@@ -102,10 +91,6 @@ class VideoDownloadService : LifecycleService() {
                         progress = offlineVideo.progress,
                         maxProgress = offlineVideo.maxProgress,
                         bytes = offlineVideo.bytes,
-                        chatProgress = offlineVideo.chatProgress,
-                        maxChatProgress = offlineVideo.maxChatProgress,
-                        chatBytes = offlineVideo.chatBytes,
-                        chatOffsetSeconds = offlineVideo.chatOffsetSeconds,
                     )
                     offlineVideos.add(offlineVideo)
                     activeDownloads.add(downloadProgress)
@@ -146,7 +131,7 @@ class VideoDownloadService : LifecycleService() {
                         }
                         offlineVideos.remove(offlineVideo)
                         activeDownloads.remove(downloadProgress)
-                        val done = downloadProgress.progress >= downloadProgress.maxProgress && (!offlineVideo.downloadChat || downloadProgress.chatProgress >= downloadProgress.maxChatProgress)
+                        val done = downloadProgress.progress >= downloadProgress.maxProgress
                         xtraModule.offlineVideosRepository.update(offlineVideo.apply {
                             status = if (done) {
                                 OfflineVideo.STATUS_DOWNLOADED
@@ -165,10 +150,6 @@ class VideoDownloadService : LifecycleService() {
                             progress = downloadProgress.progress
                             maxProgress = downloadProgress.maxProgress
                             bytes = downloadProgress.bytes
-                            chatProgress = downloadProgress.chatProgress
-                            maxChatProgress = downloadProgress.maxChatProgress
-                            chatBytes = downloadProgress.chatBytes
-                            chatOffsetSeconds = downloadProgress.chatOffsetSeconds
                         })
                         if (done) {
                             val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -419,9 +400,6 @@ class VideoDownloadService : LifecycleService() {
         val mutexMap = mutableMapOf<Int, Mutex>()
         val count = MutableStateFlow(0)
         downloadProgress.lastSaved = System.currentTimeMillis()
-        val chatJob = launch(Dispatchers.IO) {
-            startChatJob(offlineVideo, downloadProgress, path)
-        }
         val jobs = segments.drop(downloadProgress.progress).mapIndexed { index, segment ->
             requestSemaphore.acquire()
             launch(Dispatchers.IO) {
@@ -527,10 +505,6 @@ class VideoDownloadService : LifecycleService() {
                         progress = downloadProgress.progress
                         maxProgress = downloadProgress.maxProgress
                         bytes = downloadProgress.bytes
-                        chatProgress = downloadProgress.chatProgress
-                        maxChatProgress = downloadProgress.maxChatProgress
-                        chatBytes = downloadProgress.chatBytes
-                        chatOffsetSeconds = downloadProgress.chatOffsetSeconds
                     })
                 }
                 count.update { it + 1 }
@@ -542,7 +516,6 @@ class VideoDownloadService : LifecycleService() {
             }
         }
         jobs.joinAll()
-        chatJob.join()
     }
 
     private suspend fun downloadPlaylist(offlineVideo: OfflineVideo, downloadProgress: DownloadProgress, networkLibrary: String?, urlPath: String, path: String, playlist: MediaPlaylist, segments: List<Segment>) = withContext(Dispatchers.IO) {
@@ -713,9 +686,6 @@ class VideoDownloadService : LifecycleService() {
         val mutexMap = mutableMapOf<Int, Mutex>()
         val count = MutableStateFlow(0)
         downloadProgress.lastSaved = System.currentTimeMillis()
-        val chatJob = launch(Dispatchers.IO) {
-            startChatJob(offlineVideo, downloadProgress, path)
-        }
         val jobs = segments.drop(downloadProgress.progress).mapIndexed { index, segment ->
             requestSemaphore.acquire()
             launch(Dispatchers.IO) {
@@ -829,10 +799,6 @@ class VideoDownloadService : LifecycleService() {
                             progress = downloadProgress.progress
                             maxProgress = downloadProgress.maxProgress
                             bytes = downloadProgress.bytes
-                            chatProgress = downloadProgress.chatProgress
-                            maxChatProgress = downloadProgress.maxChatProgress
-                            chatBytes = downloadProgress.chatBytes
-                            chatOffsetSeconds = downloadProgress.chatOffsetSeconds
                         })
                     }
                 }
@@ -845,7 +811,6 @@ class VideoDownloadService : LifecycleService() {
             }
         }
         jobs.joinAll()
-        chatJob.join()
     }
 
     private suspend fun downloadClip(offlineVideo: OfflineVideo, downloadProgress: DownloadProgress, sourceUrl: String) = withContext(Dispatchers.IO) {
@@ -879,9 +844,6 @@ class VideoDownloadService : LifecycleService() {
             fileUri
         }
         downloadProgress.lastSaved = System.currentTimeMillis()
-        val chatJob = launch(Dispatchers.IO) {
-            startChatJob(offlineVideo, downloadProgress, path)
-        }
         val job = launch(Dispatchers.IO) {
             if (downloadProgress.progress < downloadProgress.maxProgress) {
                 when {
@@ -951,850 +913,6 @@ class VideoDownloadService : LifecycleService() {
             }
         }
         job.join()
-        chatJob.join()
-    }
-
-    private suspend fun startChatJob(offlineVideo: OfflineVideo, downloadProgress: DownloadProgress, path: String) = withContext(Dispatchers.IO) {
-        if (offlineVideo.downloadChat && downloadProgress.chatProgress < downloadProgress.maxChatProgress) {
-            val videoId = offlineVideo.videoId
-            if (videoId != null) {
-                val isShared = path.toUri().scheme == ContentResolver.SCHEME_CONTENT
-                val startTimeSeconds = (offlineVideo.sourceStartPosition!! / 1000).toInt()
-                val durationSeconds = (offlineVideo.duration!! / 1000).toInt()
-                val endTimeSeconds = startTimeSeconds + durationSeconds
-                val resumed = !offlineVideo.chatUrl.isNullOrBlank() && downloadProgress.chatBytes > 0
-                val fileUri = if (resumed) {
-                    offlineVideo.chatUrl!!
-                } else {
-                    val fileName = "${videoId}${offlineVideo.quality ?: ""}${offlineVideo.downloadDate}_chat.json"
-                    val fileUri = if (isShared) {
-                        val documentId = DocumentsContract.getTreeDocumentId(path.toUri())
-                        val directoryUri = DocumentsContract.buildDocumentUriUsingTree(path.toUri(), documentId)
-                        val fileUri = directoryUri.toString() + (if (!directoryUri.toString().endsWith("%3A")) "%2F" else "") + fileName
-                        try {
-                            contentResolver.openOutputStream(fileUri.toUri())!!.close()
-                        } catch (e: IllegalArgumentException) {
-                            DocumentsContract.createDocument(contentResolver, directoryUri, "", fileName)
-                        }
-                        fileUri
-                    } else {
-                        "$path${File.separator}$fileName"
-                    }
-                    xtraModule.offlineVideosRepository.update(offlineVideo.apply {
-                        maxChatProgress = durationSeconds
-                        chatOffsetSeconds = startTimeSeconds
-                        chatUrl = fileUri
-                    })
-                    downloadProgress.maxChatProgress = durationSeconds
-                    downloadProgress.chatOffsetSeconds = startTimeSeconds
-                    fileUri
-                }
-                val downloadEmotes = offlineVideo.downloadChatEmotes
-                val networkLibrary = prefs().getString(C.NETWORK_LIBRARY, C.OKHTTP)
-                val gqlHeaders = TwitchApiHelper.getGQLHeaders(this@VideoDownloadService, true)
-                val helixHeaders = TwitchApiHelper.getGQLHeaders(this@VideoDownloadService)
-                val emoteQuality = prefs().getString(C.CHAT_IMAGE_QUALITY, "4") ?: "4"
-                val useWebp = prefs().getBoolean(C.CHAT_USE_WEBP, true)
-                val channelId = offlineVideo.channelId
-                val channelLogin = offlineVideo.channelLogin
-                val globalBadgeList = mutableListOf<TwitchBadge>()
-                val channelBadgeList = mutableListOf<TwitchBadge>()
-                val cheerEmoteList = mutableListOf<CheerEmote>()
-                val emoteList = mutableListOf<Emote>()
-                if (downloadEmotes) {
-                    val jobs = mutableListOf<Job>().apply {
-                        add(launch(Dispatchers.IO) {
-                            try {
-                                val badges = xtraModule.playerRepository.loadGlobalBadges(networkLibrary, helixHeaders, gqlHeaders, emoteQuality, false)
-                                globalBadgeList.addAll(badges)
-                            } catch (e: Exception) {
-
-                            }
-                        })
-                        add(launch(Dispatchers.IO) {
-                            try {
-                                val response = xtraModule.playerRepository.loadGlobalSTVEmoteSetResponse(networkLibrary)
-                                val emotes = xtraModule.playerRepository.loadSTVEmoteSet(response, useWebp, true).second
-                                emoteList.addAll(emotes)
-                                emoteList.sortBy { it.source }
-                            } catch (e: Exception) {
-
-                            }
-                        })
-                        add(launch(Dispatchers.IO) {
-                            try {
-                                val response = xtraModule.playerRepository.loadGlobalBTTVEmotesResponse(networkLibrary)
-                                val emotes = xtraModule.playerRepository.loadGlobalBTTVEmotes(response, useWebp)
-                                emoteList.addAll(emotes)
-                                emoteList.sortBy { it.source }
-                            } catch (e: Exception) {
-
-                            }
-                        })
-                        add(launch(Dispatchers.IO) {
-                            try {
-                                val response = xtraModule.playerRepository.loadGlobalFFZEmotesResponse(networkLibrary)
-                                val emotes = xtraModule.playerRepository.loadGlobalFFZEmotes(response, useWebp)
-                                emoteList.addAll(emotes)
-                                emoteList.sortBy { it.source }
-                            } catch (e: Exception) {
-
-                            }
-                        })
-                        if (channelId != null) {
-                            add(launch(Dispatchers.IO) {
-                                try {
-                                    val userResponse = xtraModule.playerRepository.loadSTVUserResponse(networkLibrary, channelId)
-                                    val user = xtraModule.playerRepository.loadSTVUser(userResponse, useWebp)
-                                    val userSetId = user.first
-                                    val userEmotes = user.second
-                                    val emotes = if (!userEmotes.isNullOrEmpty()) {
-                                        userEmotes
-                                    } else {
-                                        if (!userSetId.isNullOrBlank()) {
-                                            val emoteSetResponse = xtraModule.playerRepository.loadSTVEmoteSetResponse(networkLibrary, userSetId)
-                                            val emoteSet = xtraModule.playerRepository.loadSTVEmoteSet(emoteSetResponse, useWebp, false)
-                                            emoteSet.second
-                                        } else emptyList()
-                                    }
-                                    emoteList.addAll(emotes)
-                                    emoteList.sortBy { it.source }
-                                } catch (e: Exception) {
-
-                                }
-                            })
-                            add(launch(Dispatchers.IO) {
-                                try {
-                                    val response = xtraModule.playerRepository.loadBTTVEmotesResponse(networkLibrary, channelId)
-                                    val emotes = xtraModule.playerRepository.loadBTTVEmotes(response, useWebp)
-                                    emoteList.addAll(emotes)
-                                    emoteList.sortBy { it.source }
-                                } catch (e: Exception) {
-
-                                }
-                            })
-                            add(launch(Dispatchers.IO) {
-                                try {
-                                    val response = xtraModule.playerRepository.loadFFZEmotesResponse(networkLibrary, channelId)
-                                    val emotes = xtraModule.playerRepository.loadFFZEmotes(response, useWebp)
-                                    emoteList.addAll(emotes)
-                                    emoteList.sortBy { it.source }
-                                } catch (e: Exception) {
-
-                                }
-                            })
-                            add(launch(Dispatchers.IO) {
-                                try {
-                                    val badges = xtraModule.playerRepository.loadChannelBadges(networkLibrary, helixHeaders, gqlHeaders, channelId, channelLogin, emoteQuality, false)
-                                    channelBadgeList.addAll(badges)
-                                } catch (e: Exception) {
-
-                                }
-                            })
-                            add(launch(Dispatchers.IO) {
-                                try {
-                                    val emotes = xtraModule.playerRepository.loadCheerEmotes(networkLibrary, helixHeaders, gqlHeaders, channelId, channelLogin, animateGifs = true, enableIntegrity = false)
-                                    cheerEmoteList.addAll(emotes)
-                                } catch (e: Exception) {
-
-                                }
-                            })
-                        }
-                    }
-                    jobs.joinAll()
-                }
-                var position = downloadProgress.chatBytes
-                val startOffset = downloadProgress.chatOffsetSeconds
-                val latestSavedMessageIds = mutableListOf<String>()
-                val savedTwitchEmotes = mutableListOf<String>()
-                val savedBadges = mutableListOf<Pair<String, String>>()
-                val savedEmotes = mutableListOf<String>()
-                if (resumed) {
-                    if (isShared) {
-                        contentResolver.openFileDescriptor(fileUri.toUri(), "rw")!!.use {
-                            FileOutputStream(it.fileDescriptor).use { output ->
-                                output.channel.truncate(downloadProgress.chatBytes)
-                            }
-                        }
-                    } else {
-                        FileOutputStream(fileUri).use { output ->
-                            output.channel.truncate(downloadProgress.chatBytes)
-                        }
-                    }
-                    if (isShared) {
-                        contentResolver.openOutputStream(fileUri.toUri(), "wa")!!.bufferedWriter()
-                    } else {
-                        FileOutputStream(fileUri, true).bufferedWriter()
-                    }.use { writer ->
-                        writer.write("}")
-                    }
-                    if (isShared) {
-                        contentResolver.openInputStream(fileUri.toUri())?.bufferedReader()
-                    } else {
-                        FileInputStream(File(fileUri)).bufferedReader()
-                    }?.use { fileReader ->
-                        JsonReader(fileReader).use { reader ->
-                            reader.isLenient = true
-                            var token: JsonToken
-                            do {
-                                token = reader.peek()
-                                when (token) {
-                                    JsonToken.END_DOCUMENT -> {}
-                                    JsonToken.BEGIN_OBJECT -> {
-                                        reader.beginObject()
-                                        while (reader.hasNext()) {
-                                            when (reader.peek()) {
-                                                JsonToken.NAME -> {
-                                                    when (reader.nextName()) {
-                                                        "comments" -> {
-                                                            reader.beginArray()
-                                                            while (reader.hasNext()) {
-                                                                reader.beginObject()
-                                                                var id: String? = null
-                                                                while (reader.hasNext()) {
-                                                                    when (reader.nextName()) {
-                                                                        "id" -> id = reader.nextString()
-                                                                        else -> reader.skipValue()
-                                                                    }
-                                                                }
-                                                                if (!id.isNullOrBlank()) {
-                                                                    latestSavedMessageIds.add(id)
-                                                                }
-                                                                reader.endObject()
-                                                            }
-                                                            reader.endArray()
-                                                        }
-                                                        "twitchEmotes" -> {
-                                                            reader.beginArray()
-                                                            while (reader.hasNext()) {
-                                                                reader.beginObject()
-                                                                var id: String? = null
-                                                                while (reader.hasNext()) {
-                                                                    when (reader.nextName()) {
-                                                                        "id" -> id = reader.nextString()
-                                                                        else -> reader.skipValue()
-                                                                    }
-                                                                }
-                                                                if (!id.isNullOrBlank()) {
-                                                                    savedTwitchEmotes.add(id)
-                                                                }
-                                                                reader.endObject()
-                                                            }
-                                                            reader.endArray()
-                                                        }
-                                                        "twitchBadges" -> {
-                                                            reader.beginArray()
-                                                            while (reader.hasNext()) {
-                                                                reader.beginObject()
-                                                                var setId: String? = null
-                                                                var version: String? = null
-                                                                while (reader.hasNext()) {
-                                                                    when (reader.nextName()) {
-                                                                        "setId" -> setId = reader.nextString()
-                                                                        "version" -> version = reader.nextString()
-                                                                        else -> reader.skipValue()
-                                                                    }
-                                                                }
-                                                                if (!setId.isNullOrBlank() && !version.isNullOrBlank()) {
-                                                                    savedBadges.add(Pair(setId, version))
-                                                                }
-                                                                reader.endObject()
-                                                            }
-                                                            reader.endArray()
-                                                        }
-                                                        "cheerEmotes" -> {
-                                                            reader.beginArray()
-                                                            while (reader.hasNext()) {
-                                                                reader.beginObject()
-                                                                var name: String? = null
-                                                                while (reader.hasNext()) {
-                                                                    when (reader.nextName()) {
-                                                                        "name" -> name = reader.nextString()
-                                                                        else -> reader.skipValue()
-                                                                    }
-                                                                }
-                                                                if (!name.isNullOrBlank()) {
-                                                                    savedEmotes.add(name)
-                                                                }
-                                                                reader.endObject()
-                                                            }
-                                                            reader.endArray()
-                                                        }
-                                                        "emotes" -> {
-                                                            reader.beginArray()
-                                                            while (reader.hasNext()) {
-                                                                reader.beginObject()
-                                                                var name: String? = null
-                                                                while (reader.hasNext()) {
-                                                                    when (reader.nextName()) {
-                                                                        "name" -> name = reader.nextString()
-                                                                        else -> reader.skipValue()
-                                                                    }
-                                                                }
-                                                                if (!name.isNullOrBlank()) {
-                                                                    savedEmotes.add(name)
-                                                                }
-                                                                reader.endObject()
-                                                            }
-                                                            reader.endArray()
-                                                        }
-                                                        else -> reader.skipValue()
-                                                    }
-                                                }
-                                                else -> reader.skipValue()
-                                            }
-                                        }
-                                        reader.endObject()
-                                    }
-                                    else -> reader.skipValue()
-                                }
-                            } while (token != JsonToken.END_DOCUMENT)
-                        }
-                    }
-                    if (isShared) {
-                        contentResolver.openFileDescriptor(fileUri.toUri(), "rw")!!.use {
-                            FileOutputStream(it.fileDescriptor).use { output ->
-                                output.channel.truncate(downloadProgress.chatBytes)
-                            }
-                        }
-                    } else {
-                        FileOutputStream(fileUri).use { output ->
-                            output.channel.truncate(downloadProgress.chatBytes)
-                        }
-                    }
-                } else {
-                    if (isShared) {
-                        contentResolver.openOutputStream(fileUri.toUri())!!.bufferedWriter()
-                    } else {
-                        FileOutputStream(fileUri).bufferedWriter()
-                    }.use { writer ->
-                        writer.write("{".also { position += 1 })
-                        writer.write("\"video\":".also { position += it.length })
-                        writer.write(
-                            buildJsonObject {
-                                put("id", videoId)
-                                offlineVideo.name?.let { put("title", it) }
-                                offlineVideo.uploadDate?.let { put("uploadDate", it) }
-                                offlineVideo.channelId?.let { put("channelId", it) }
-                                offlineVideo.channelLogin?.let { put("channelLogin", it) }
-                                offlineVideo.channelName?.let { put("channelName", it) }
-                                offlineVideo.gameId?.let { put("gameId", it) }
-                                offlineVideo.gameSlug?.let { put("gameSlug", it) }
-                                offlineVideo.gameName?.let { put("gameName", it) }
-                            }.toString().also { position += it.toByteArray().size }
-                        )
-                        writer.write(",".also { position += 1 })
-                        writer.write("\"startTime\":$startTimeSeconds".also { position += it.length })
-                    }
-                }
-                var cursor: String? = null
-                while (true) {
-                    val response = if (cursor == null) {
-                        xtraModule.graphQLRepository.loadQueryVideoCommentsDownload(networkLibrary, CRONET_TIMEOUT, okHttpClient, gqlHeaders, videoId, offset = startOffset)
-                    } else {
-                        xtraModule.graphQLRepository.loadQueryVideoCommentsDownload(networkLibrary, CRONET_TIMEOUT, okHttpClient, gqlHeaders, videoId, cursor = cursor)
-                    }
-                    val comments = response.data!!.video.comments
-                    val messages = if (cursor == null && resumed) {
-                        comments.edges.filter { item ->
-                            val id = item.node.id
-                            val offset = item.node.contentOffsetSeconds
-                            id != null && offset != null && ((offset == startOffset && !latestSavedMessageIds.contains(id)) || offset > startOffset)
-                        }
-                    } else {
-                        comments.edges
-                    }
-                    cursor = if (comments.pageInfo?.hasNextPage != false) comments.edges.lastOrNull()?.cursor else null
-                    if (messages.isNotEmpty()) {
-                        if (isShared) {
-                            contentResolver.openOutputStream(fileUri.toUri(), "wa")!!.bufferedWriter()
-                        } else {
-                            FileOutputStream(fileUri, true).bufferedWriter()
-                        }.use { writer ->
-                            writer.write(",".also { position += 1 })
-                            writer.write("\"comments\":".also { position += it.length })
-                            writer.write("[".also { position += 1 })
-                            messages.forEachIndexed { index, message ->
-                                if (index > 0) {
-                                    writer.write(",".also { position += 1 })
-                                }
-                                writer.write(xtraModule.json.encodeToString(message.node).also { position += it.toByteArray().size })
-                            }
-                            writer.write("]".also { position += 1 })
-                        }
-                        if (downloadEmotes) {
-                            val twitchEmotes = mutableListOf<TwitchEmote>()
-                            val twitchBadges = mutableListOf<TwitchBadge>()
-                            val cheerEmotes = mutableListOf<CheerEmote>()
-                            val emotes = mutableListOf<Emote>()
-                            val words = mutableListOf<String>()
-                            messages.forEach { comment ->
-                                comment.node.let { item ->
-                                    item.message?.let { message ->
-                                        val chatMessage = StringBuilder()
-                                        message.fragments?.forEach { fragment ->
-                                            fragment.text?.let { text ->
-                                                fragment.emote?.emoteID?.let { id ->
-                                                    if (!savedTwitchEmotes.contains(id)) {
-                                                        savedTwitchEmotes.add(id)
-                                                        twitchEmotes.add(TwitchEmote(id = id))
-                                                    }
-                                                }
-                                                chatMessage.append(text)
-                                            }
-                                        }
-                                        message.userBadges?.forEach { badge ->
-                                            badge.setID?.let { setId ->
-                                                badge.version?.let { version ->
-                                                    val pair = Pair(setId, version)
-                                                    if (!savedBadges.contains(pair)) {
-                                                        savedBadges.add(pair)
-                                                        val badge = channelBadgeList.find { badge -> badge.setId == setId && badge.version == version }
-                                                            ?: globalBadgeList.find { badge -> badge.setId == setId && badge.version == version }
-                                                        if (badge != null) {
-                                                            twitchBadges.add(badge)
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        chatMessage.toString().split(" ").forEach { string ->
-                                            if (!words.contains(string)) {
-                                                words.add(string)
-                                                if (!savedEmotes.contains(string)) {
-                                                    val bitsCount = string.takeLastWhile { it.isDigit() }
-                                                    val cheerEmote = if (bitsCount.isNotEmpty()) {
-                                                        val bitsName = string.substringBeforeLast(bitsCount)
-                                                        cheerEmoteList.findLast { it.name.equals(bitsName, true) && it.minBits <= bitsCount.toInt() }
-                                                    } else null
-                                                    if (cheerEmote != null) {
-                                                        savedEmotes.add(string)
-                                                        cheerEmotes.add(cheerEmote)
-                                                    } else {
-                                                        val emote = emoteList.find { it.name == string }
-                                                        if (emote != null) {
-                                                            savedEmotes.add(string)
-                                                            emotes.add(emote)
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            val requestSemaphore = Semaphore(10)
-                            val mutexMap = mutableMapOf<Int, Mutex>()
-                            val count = MutableStateFlow(0)
-                            val twitchEmoteJobs = if (twitchEmotes.isNotEmpty()) {
-                                val lastIndex = twitchEmotes.lastIndex
-                                twitchEmotes.mapIndexed { index, emote ->
-                                    requestSemaphore.acquire()
-                                    launch(Dispatchers.IO) {
-                                        val url = when (emoteQuality) {
-                                            "4" -> emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x
-                                            "3" -> emote.url3x ?: emote.url2x ?: emote.url1x
-                                            "2" -> emote.url2x ?: emote.url1x
-                                            else -> emote.url1x
-                                        }!!
-                                        val response = when {
-                                            networkLibrary == C.HTTP_ENGINE && xtraModule.httpEngine.value != null -> @SuppressLint("NewApi") {
-                                                val response = suspendCancellableCoroutine { continuation ->
-                                                    val timeout = NetworkUtils.HttpEngineTimeout(CRONET_TIMEOUT)
-                                                    val request = xtraModule.httpEngine.value!!.newUrlRequestBuilder(
-                                                        url,
-                                                        xtraModule.cronetExecutor.value,
-                                                        NetworkUtils.ByteArrayUrlCallback(continuation, timeout)
-                                                    ).build()
-                                                    timeout.start(request, continuation)
-                                                    request.start()
-                                                    continuation.invokeOnCancellation {
-                                                        request.cancel()
-                                                        timeout.stop()
-                                                    }
-                                                }
-                                                response.body
-                                            }
-                                            networkLibrary == C.CRONET && xtraModule.cronetEngine.value != null -> {
-                                                val response = suspendCancellableCoroutine { continuation ->
-                                                    val timeout = NetworkUtils.CronetTimeout(CRONET_TIMEOUT)
-                                                    val request = xtraModule.cronetEngine.value!!.newUrlRequestBuilder(
-                                                        url,
-                                                        NetworkUtils.ByteArrayCronetCallback(continuation, timeout),
-                                                        xtraModule.cronetExecutor.value
-                                                    ).build()
-                                                    timeout.start(request, continuation)
-                                                    request.start()
-                                                    continuation.invokeOnCancellation {
-                                                        request.cancel()
-                                                        timeout.stop()
-                                                    }
-                                                }
-                                                response.body
-                                            }
-                                            else -> {
-                                                okHttpClient.value.newCall(Request.Builder().url(url).build()).executeAsync().use { response ->
-                                                    response.body.source().readByteArray()
-                                                }
-                                            }
-                                        }
-                                        val mutex = Mutex()
-                                        if (count.value != index) {
-                                            mutex.lock()
-                                            mutexMap[index] = mutex
-                                        }
-                                        mutex.withLock {
-                                            if (isShared) {
-                                                contentResolver.openOutputStream(fileUri.toUri(), "wa")!!.bufferedWriter()
-                                            } else {
-                                                FileOutputStream(fileUri, true).bufferedWriter()
-                                            }.use { writer ->
-                                                writer.write(",".also { position += 1 })
-                                                if (index == 0) {
-                                                    writer.write("\"twitchEmotes\":".also { position += it.length })
-                                                    writer.write("[".also { position += 1 })
-                                                }
-                                                writer.write(
-                                                    buildJsonObject {
-                                                        put("data", Base64.encodeToString(response, Base64.NO_WRAP or Base64.NO_PADDING))
-                                                        put("id", emote.id)
-                                                    }.toString().also { position += it.toByteArray().size }
-                                                )
-                                                if (index == lastIndex) {
-                                                    writer.write("]".also { position += 1 })
-                                                }
-                                            }
-                                        }
-                                        count.update { it + 1 }
-                                        mutexMap.remove(count.value)?.unlock()
-                                    }.also {
-                                        it.invokeOnCompletion {
-                                            requestSemaphore.release()
-                                        }
-                                    }
-                                }
-                            } else null
-                            val twitchBadgeJobs = if (twitchBadges.isNotEmpty()) {
-                                val offset = twitchEmotes.size
-                                val lastIndex = twitchBadges.lastIndex
-                                twitchBadges.mapIndexed { index, badge ->
-                                    requestSemaphore.acquire()
-                                    launch(Dispatchers.IO) {
-                                        val url = when (emoteQuality) {
-                                            "4" -> badge.url4x ?: badge.url3x ?: badge.url2x ?: badge.url1x
-                                            "3" -> badge.url3x ?: badge.url2x ?: badge.url1x
-                                            "2" -> badge.url2x ?: badge.url1x
-                                            else -> badge.url1x
-                                        }!!
-                                        val response = when {
-                                            networkLibrary == C.HTTP_ENGINE && xtraModule.httpEngine.value != null -> @SuppressLint("NewApi") {
-                                                val response = suspendCancellableCoroutine { continuation ->
-                                                    val timeout = NetworkUtils.HttpEngineTimeout(CRONET_TIMEOUT)
-                                                    val request = xtraModule.httpEngine.value!!.newUrlRequestBuilder(
-                                                        url,
-                                                        xtraModule.cronetExecutor.value,
-                                                        NetworkUtils.ByteArrayUrlCallback(continuation, timeout)
-                                                    ).build()
-                                                    timeout.start(request, continuation)
-                                                    request.start()
-                                                    continuation.invokeOnCancellation {
-                                                        request.cancel()
-                                                        timeout.stop()
-                                                    }
-                                                }
-                                                response.body
-                                            }
-                                            networkLibrary == C.CRONET && xtraModule.cronetEngine.value != null -> {
-                                                val response = suspendCancellableCoroutine { continuation ->
-                                                    val timeout = NetworkUtils.CronetTimeout(CRONET_TIMEOUT)
-                                                    val request = xtraModule.cronetEngine.value!!.newUrlRequestBuilder(
-                                                        url,
-                                                        NetworkUtils.ByteArrayCronetCallback(continuation, timeout),
-                                                        xtraModule.cronetExecutor.value
-                                                    ).build()
-                                                    timeout.start(request, continuation)
-                                                    request.start()
-                                                    continuation.invokeOnCancellation {
-                                                        request.cancel()
-                                                        timeout.stop()
-                                                    }
-                                                }
-                                                response.body
-                                            }
-                                            else -> {
-                                                okHttpClient.value.newCall(Request.Builder().url(url).build()).executeAsync().use { response ->
-                                                    response.body.source().readByteArray()
-                                                }
-                                            }
-                                        }
-                                        val mutex = Mutex()
-                                        val mutexIndex = index + offset
-                                        if (count.value != mutexIndex) {
-                                            mutex.lock()
-                                            mutexMap[mutexIndex] = mutex
-                                        }
-                                        mutex.withLock {
-                                            if (isShared) {
-                                                contentResolver.openOutputStream(fileUri.toUri(), "wa")!!.bufferedWriter()
-                                            } else {
-                                                FileOutputStream(fileUri, true).bufferedWriter()
-                                            }.use { writer ->
-                                                writer.write(",".also { position += 1 })
-                                                if (index == 0) {
-                                                    writer.write("\"twitchBadges\":".also { position += it.length })
-                                                    writer.write("[".also { position += 1 })
-                                                }
-                                                writer.write(
-                                                    buildJsonObject {
-                                                        put("data", Base64.encodeToString(response, Base64.NO_WRAP or Base64.NO_PADDING))
-                                                        put("setId", badge.setId)
-                                                        put("version", badge.version)
-                                                    }.toString().also { position += it.toByteArray().size }
-                                                )
-                                                if (index == lastIndex) {
-                                                    writer.write("]".also { position += 1 })
-                                                }
-                                            }
-                                        }
-                                        count.update { it + 1 }
-                                        mutexMap.remove(count.value)?.unlock()
-                                    }.also {
-                                        it.invokeOnCompletion {
-                                            requestSemaphore.release()
-                                        }
-                                    }
-                                }
-                            } else null
-                            val cheerEmoteJobs = if (cheerEmotes.isNotEmpty()) {
-                                val offset = twitchEmotes.size + twitchBadges.size
-                                val lastIndex = cheerEmotes.lastIndex
-                                cheerEmotes.mapIndexed { index, cheerEmote ->
-                                    requestSemaphore.acquire()
-                                    launch(Dispatchers.IO) {
-                                        val url = when (emoteQuality) {
-                                            "4" -> cheerEmote.url4x ?: cheerEmote.url3x ?: cheerEmote.url2x ?: cheerEmote.url1x
-                                            "3" -> cheerEmote.url3x ?: cheerEmote.url2x ?: cheerEmote.url1x
-                                            "2" -> cheerEmote.url2x ?: cheerEmote.url1x
-                                            else -> cheerEmote.url1x
-                                        }!!
-                                        val response = when {
-                                            networkLibrary == C.HTTP_ENGINE && xtraModule.httpEngine.value != null -> @SuppressLint("NewApi") {
-                                                val response = suspendCancellableCoroutine { continuation ->
-                                                    val timeout = NetworkUtils.HttpEngineTimeout(CRONET_TIMEOUT)
-                                                    val request = xtraModule.httpEngine.value!!.newUrlRequestBuilder(
-                                                        url,
-                                                        xtraModule.cronetExecutor.value,
-                                                        NetworkUtils.ByteArrayUrlCallback(continuation, timeout)
-                                                    ).build()
-                                                    timeout.start(request, continuation)
-                                                    request.start()
-                                                    continuation.invokeOnCancellation {
-                                                        request.cancel()
-                                                        timeout.stop()
-                                                    }
-                                                }
-                                                response.body
-                                            }
-                                            networkLibrary == C.CRONET && xtraModule.cronetEngine.value != null -> {
-                                                val response = suspendCancellableCoroutine { continuation ->
-                                                    val timeout = NetworkUtils.CronetTimeout(CRONET_TIMEOUT)
-                                                    val request = xtraModule.cronetEngine.value!!.newUrlRequestBuilder(
-                                                        url,
-                                                        NetworkUtils.ByteArrayCronetCallback(continuation, timeout),
-                                                        xtraModule.cronetExecutor.value
-                                                    ).build()
-                                                    timeout.start(request, continuation)
-                                                    request.start()
-                                                    continuation.invokeOnCancellation {
-                                                        request.cancel()
-                                                        timeout.stop()
-                                                    }
-                                                }
-                                                response.body
-                                            }
-                                            else -> {
-                                                okHttpClient.value.newCall(Request.Builder().url(url).build()).executeAsync().use { response ->
-                                                    response.body.source().readByteArray()
-                                                }
-                                            }
-                                        }
-                                        val mutex = Mutex()
-                                        val mutexIndex = index + offset
-                                        if (count.value != mutexIndex) {
-                                            mutex.lock()
-                                            mutexMap[mutexIndex] = mutex
-                                        }
-                                        mutex.withLock {
-                                            if (isShared) {
-                                                contentResolver.openOutputStream(fileUri.toUri(), "wa")!!.bufferedWriter()
-                                            } else {
-                                                FileOutputStream(fileUri, true).bufferedWriter()
-                                            }.use { writer ->
-                                                writer.write(",".also { position += 1 })
-                                                if (index == 0) {
-                                                    writer.write("\"cheerEmotes\":".also { position += it.length })
-                                                    writer.write("[".also { position += 1 })
-                                                }
-                                                writer.write(
-                                                    buildJsonObject {
-                                                        put("data", Base64.encodeToString(response, Base64.NO_WRAP or Base64.NO_PADDING))
-                                                        put("name", cheerEmote.name)
-                                                        put("minBits", cheerEmote.minBits)
-                                                        cheerEmote.color?.let { put("color", it) }
-                                                    }.toString().also { position += it.toByteArray().size }
-                                                )
-                                                if (index == lastIndex) {
-                                                    writer.write("]".also { position += 1 })
-                                                }
-                                            }
-                                        }
-                                        count.update { it + 1 }
-                                        mutexMap.remove(count.value)?.unlock()
-                                    }.also {
-                                        it.invokeOnCompletion {
-                                            requestSemaphore.release()
-                                        }
-                                    }
-                                }
-                            } else null
-                            val emoteJobs = if (emotes.isNotEmpty()) {
-                                val offset = twitchEmotes.size + twitchBadges.size + cheerEmotes.size
-                                val lastIndex = emotes.lastIndex
-                                emotes.mapIndexed { index, emote ->
-                                    requestSemaphore.acquire()
-                                    launch(Dispatchers.IO) {
-                                        val url = when (emoteQuality) {
-                                            "4" -> emote.url4x ?: emote.url3x ?: emote.url2x ?: emote.url1x
-                                            "3" -> emote.url3x ?: emote.url2x ?: emote.url1x
-                                            "2" -> emote.url2x ?: emote.url1x
-                                            else -> emote.url1x
-                                        }!!
-                                        val response = when {
-                                            networkLibrary == C.HTTP_ENGINE && xtraModule.httpEngine.value != null -> @SuppressLint("NewApi") {
-                                                val response = suspendCancellableCoroutine { continuation ->
-                                                    val timeout = NetworkUtils.HttpEngineTimeout(CRONET_TIMEOUT)
-                                                    val request = xtraModule.httpEngine.value!!.newUrlRequestBuilder(
-                                                        url,
-                                                        xtraModule.cronetExecutor.value,
-                                                        NetworkUtils.ByteArrayUrlCallback(continuation, timeout)
-                                                    ).build()
-                                                    timeout.start(request, continuation)
-                                                    request.start()
-                                                    continuation.invokeOnCancellation {
-                                                        request.cancel()
-                                                        timeout.stop()
-                                                    }
-                                                }
-                                                response.body
-                                            }
-                                            networkLibrary == C.CRONET && xtraModule.cronetEngine.value != null -> {
-                                                val response = suspendCancellableCoroutine { continuation ->
-                                                    val timeout = NetworkUtils.CronetTimeout(CRONET_TIMEOUT)
-                                                    val request = xtraModule.cronetEngine.value!!.newUrlRequestBuilder(
-                                                        url,
-                                                        NetworkUtils.ByteArrayCronetCallback(continuation, timeout),
-                                                        xtraModule.cronetExecutor.value
-                                                    ).build()
-                                                    timeout.start(request, continuation)
-                                                    request.start()
-                                                    continuation.invokeOnCancellation {
-                                                        request.cancel()
-                                                        timeout.stop()
-                                                    }
-                                                }
-                                                response.body
-                                            }
-                                            else -> {
-                                                okHttpClient.value.newCall(Request.Builder().url(url).build()).executeAsync().use { response ->
-                                                    response.body.source().readByteArray()
-                                                }
-                                            }
-                                        }
-                                        val mutex = Mutex()
-                                        val mutexIndex = index + offset
-                                        if (count.value != mutexIndex) {
-                                            mutex.lock()
-                                            mutexMap[mutexIndex] = mutex
-                                        }
-                                        mutex.withLock {
-                                            if (isShared) {
-                                                contentResolver.openOutputStream(fileUri.toUri(), "wa")!!.bufferedWriter()
-                                            } else {
-                                                FileOutputStream(fileUri, true).bufferedWriter()
-                                            }.use { writer ->
-                                                writer.write(",".also { position += 1 })
-                                                if (index == 0) {
-                                                    writer.write("\"emotes\":".also { position += it.length })
-                                                    writer.write("[".also { position += 1 })
-                                                }
-                                                writer.write(
-                                                    buildJsonObject {
-                                                        put("data", Base64.encodeToString(response, Base64.NO_WRAP or Base64.NO_PADDING))
-                                                        put("name", emote.name)
-                                                        put("isZeroWidth", emote.isOverlayEmote)
-                                                    }.toString().also { position += it.toByteArray().size }
-                                                )
-                                                if (index == lastIndex) {
-                                                    writer.write("]".also { position += 1 })
-                                                }
-                                            }
-                                        }
-                                        count.update { it + 1 }
-                                        mutexMap.remove(count.value)?.unlock()
-                                    }.also {
-                                        it.invokeOnCompletion {
-                                            requestSemaphore.release()
-                                        }
-                                    }
-                                }
-                            } else null
-                            twitchEmoteJobs?.joinAll()
-                            twitchBadgeJobs?.joinAll()
-                            cheerEmoteJobs?.joinAll()
-                            emoteJobs?.joinAll()
-                        }
-                    }
-                    val lastOffsetSeconds = comments.edges.lastOrNull()?.node?.contentOffsetSeconds
-                    if (lastOffsetSeconds != null && lastOffsetSeconds < endTimeSeconds && !cursor.isNullOrBlank()) {
-                        downloadProgress.chatProgress = lastOffsetSeconds - startTimeSeconds
-                        downloadProgress.chatBytes = position
-                        downloadProgress.chatOffsetSeconds = lastOffsetSeconds
-                        listener?.update(downloadProgress)
-                        val currentTime = System.currentTimeMillis()
-                        if (currentTime - downloadProgress.lastSaved >= 5000L) {
-                            downloadProgress.lastSaved = currentTime
-                            xtraModule.offlineVideosRepository.update(offlineVideo.apply {
-                                progress = downloadProgress.progress
-                                maxProgress = downloadProgress.maxProgress
-                                bytes = downloadProgress.bytes
-                                chatProgress = downloadProgress.chatProgress
-                                maxChatProgress = downloadProgress.maxChatProgress
-                                chatBytes = downloadProgress.chatBytes
-                                chatOffsetSeconds = downloadProgress.chatOffsetSeconds
-                            })
-                        }
-                    } else {
-                        if (isShared) {
-                            contentResolver.openOutputStream(fileUri.toUri(), "wa")!!.bufferedWriter()
-                        } else {
-                            FileOutputStream(fileUri, true).bufferedWriter()
-                        }.use { writer ->
-                            writer.write("}".also { position += 1 })
-                        }
-                        downloadProgress.chatProgress = downloadProgress.maxChatProgress
-                        downloadProgress.chatBytes = position
-                        if (lastOffsetSeconds != null) {
-                            downloadProgress.chatOffsetSeconds = lastOffsetSeconds
-                        }
-                        listener?.update(downloadProgress)
-                        break
-                    }
-                }
-            } else {
-                downloadProgress.chatProgress = downloadProgress.maxChatProgress
-                listener?.update(downloadProgress)
-            }
-        }
     }
 
     private fun sendNotification(offlineVideo: OfflineVideo, downloadProgress: DownloadProgress, paused: Boolean = false) {
@@ -1903,10 +1021,6 @@ class VideoDownloadService : LifecycleService() {
                                 progress = downloadProgress.progress
                                 maxProgress = downloadProgress.maxProgress
                                 bytes = downloadProgress.bytes
-                                chatProgress = downloadProgress.chatProgress
-                                maxChatProgress = downloadProgress.maxChatProgress
-                                chatBytes = downloadProgress.chatBytes
-                                chatOffsetSeconds = downloadProgress.chatOffsetSeconds
                             })
                         }
                     }

@@ -456,7 +456,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                     tabLayout.tabMode = TabLayout.MODE_SCROLLABLE
                 }
             }
-            val adapter = ChannelPagerAdapter(this@ChannelPagerFragment, args, tabs)
+            val adapter = ChannelPagerAdapter(this@ChannelPagerFragment, tabs)
             viewPager.adapter = adapter
             if (!requireContext().prefs().getBoolean(C.UI_THEME_APPBAR_LIFT, true)) {
                 appBar.setLiftable(false)
@@ -468,13 +468,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                 private val originalScrollFlags = layoutParams.scrollFlags
 
                 override fun onPageSelected(position: Int) {
-                    layoutParams.scrollFlags = if (tabs.getOrNull(position) != "3") {
-                        originalScrollFlags
-                    } else {
-                        appBar.setExpanded(false, isResumed)
-                        appBar.background = null
-                        AppBarLayout.LayoutParams.SCROLL_FLAG_SCROLL
-                    }
+                    layoutParams.scrollFlags = originalScrollFlags
                     viewPager.doOnLayout {
                         childFragmentManager.findFragmentByTag("f${position}").let { fragment ->
                             if (fragment is Sortable) {
@@ -513,7 +507,6 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                     "0" -> getString(R.string.suggestions)
                     "1" -> getString(R.string.videos)
                     "2" -> getString(R.string.clips)
-                    "3" -> getString(R.string.chat)
                     "4" -> getString(R.string.about)
                     else -> getString(R.string.videos)
                 }

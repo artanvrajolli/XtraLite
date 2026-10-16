@@ -17,10 +17,6 @@
         android:title="@string/move_to_shared_storage"
         android:visible="false" />
     <item
-        android:id="@+id/updateChatUrl"
-        android:title="@string/change_chat_file"
-        android:visible="false" />
-    <item
         android:id="@+id/shareVideo"
         android:title="@string/share"
         android:visible="false" />

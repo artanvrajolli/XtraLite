@@ -106,7 +106,6 @@ class MediaPlayerService : BasePlaybackService() {
         fun onVideoSizeChanged(player: MediaPlayer, width: Int, height: Int)
         fun onError(player: MediaPlayer, what: Int, extra: Int)
         fun onIsPlayingChanged()
-        fun onSpeedChanged(speed: Float)
     }
 
     var playerListener: PlayerListener? = null
@@ -226,7 +225,6 @@ class MediaPlayerService : BasePlaybackService() {
                         val params = PlaybackParams()
                         params.speed = speed
                         player.playbackParams = params
-                        playerListener?.onSpeedChanged(speed)
                     }
                 }
 
@@ -854,7 +852,6 @@ class MediaPlayerService : BasePlaybackService() {
                                 val audio = find { it.name?.startsWith("audio", true) == true }
                                 audio?.let { remove(it) }
                                 add(VideoQuality(VideoQuality.AUDIO_ONLY_QUALITY, audio?.resolution, audio?.frameRate, audio?.bitrate, audio?.codecs, audio?.url))
-                                add(VideoQuality(VideoQuality.CHAT_ONLY_QUALITY))
                             }
                         setDefaultQuality()
                         serviceListener?.changePlayerMode()
@@ -1383,11 +1380,6 @@ class MediaPlayerService : BasePlaybackService() {
                             player.prepareAsync()
                         }
                     }
-                    VideoQuality.CHAT_ONLY_QUALITY -> {
-                        player.stop()
-                        updatePlayingState()
-                        playerListener?.onIsPlayingChanged()
-                    }
                     else -> {
                         quality.url?.let {
                             val position = player.currentPosition.toLong()
@@ -1414,10 +1406,8 @@ class MediaPlayerService : BasePlaybackService() {
     }
 
     fun restartPlayer() {
-        if (quality?.name != VideoQuality.CHAT_ONLY_QUALITY) {
-            lifecycleScope.launch {
-                loadStream(restart = true)
-            }
+        lifecycleScope.launch {
+            loadStream(restart = true)
         }
     }
 

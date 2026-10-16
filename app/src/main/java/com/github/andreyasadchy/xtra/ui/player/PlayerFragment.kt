@@ -29,14 +29,13 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.view.ViewPropertyAnimator
-import android.view.inputmethod.InputMethodManager
-import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.trackPipAnimationHintView
 import androidx.annotation.OptIn
+import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
@@ -52,17 +51,16 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.TimeBar
 import androidx.navigation.fragment.findNavController
-import androidx.recyclerview.widget.RecyclerView
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentPlayerBinding
 import com.github.andreyasadchy.xtra.model.VideoQuality
 import com.github.andreyasadchy.xtra.model.ui.Video
 import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
-import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
 import com.github.andreyasadchy.xtra.ui.common.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
@@ -74,9 +72,18 @@ import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel.Companion.PlayerV
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
-import com.github.andreyasadchy.xtra.util.isKeyboardShown
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.tokenPrefs
+import com.google.android.gms.cast.MediaInfo
+import com.google.android.gms.cast.MediaLoadRequestData
+import com.google.android.gms.cast.MediaMetadata
+import com.google.android.gms.cast.framework.CastButtonFactory
+import com.google.android.gms.cast.framework.CastContext
+import com.google.android.gms.cast.framework.CastSession
+import com.google.android.gms.cast.framework.SessionManagerListener
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.common.images.WebImage
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.timepicker.MaterialTimePicker
@@ -94,16 +101,12 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
     private var _binding: FragmentPlayerBinding? = null
     protected val binding get() = _binding!!
     protected val viewModel: PlayerViewModel by viewModels { PlayerViewModelFactory }
-    protected var chatFragment: ChatFragment? = null
     protected open val playbackService: BasePlaybackService? = null
     protected var started = false
 
     private var isPortrait = false
     protected var isMaximized = true
-    private var isChatOpen = true
-    private var isKeyboardShown = false
     private var resizeMode = 0
-    private var chatWidthLandscape = 0
 
     private var activePointerId = -1
     private var lastX = 0f
@@ -114,7 +117,6 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
     private var startTranslationX = 0f
     private var startTranslationY = 0f
     private var statusBarSwipe = false
-    private var chatStatusBarSwipe = false
     private var isAnimating = false
     private var moveAnimation: ViewPropertyAnimator? = null
     protected var useController = true
@@ -125,6 +127,24 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
     private var controllerAnimation: ViewPropertyAnimator? = null
     private var backgroundColor: Int? = null
     private var backgroundVisible = false
+
+    private var castContext: CastContext? = null
+    private val castSessionListener = object : SessionManagerListener<CastSession> {
+        override fun onSessionStarted(session: CastSession, sessionId: String) {
+            if (view != null) {
+                startCasting(session, true)
+            }
+        }
+
+        override fun onSessionStarting(session: CastSession) {}
+        override fun onSessionStartFailed(session: CastSession, error: Int) {}
+        override fun onSessionEnding(session: CastSession) {}
+        override fun onSessionEnded(session: CastSession, error: Int) {}
+        override fun onSessionResuming(session: CastSession, sessionId: String) {}
+        override fun onSessionResumed(session: CastSession, wasSuspended: Boolean) {}
+        override fun onSessionResumeFailed(session: CastSession, error: Int) {}
+        override fun onSessionSuspended(session: CastSession, reason: Int) {}
+    }
 
     private val backPressedCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
@@ -137,11 +157,15 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
     open fun getCurrentVolume(): Float? = null
     open fun getTotalDuration(): Long? = null
     open fun playPause() {}
+    open fun pausePlayback() {}
+    open fun getCastUrl(): String? = null
     open fun rewind() {}
     open fun fastForward() {}
     open fun seek(position: Long) {}
     open fun seekToLivePosition() {}
     open fun setPlaybackSpeed(speed: Float) {}
+    open fun getSkipSilence(): Boolean? = null
+    open fun setSkipSilence(enabled: Boolean) {}
     open fun changeVolume(volume: Float) {}
     open fun updateProgress() {}
     open fun restartPlayer() {}
@@ -218,7 +242,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                         }
                     }
                 }
-                chatLayout.updatePadding(bottom = insets.bottom)
+                secondaryLayout.updatePadding(bottom = insets.bottom)
                 WindowInsetsCompat.CONSUMED
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
@@ -236,8 +260,6 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
             } else {
                 disableBackground()
             }
-            isChatOpen = requireContext().prefs().getBoolean(C.KEY_CHAT_OPENED, true) && !requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)
-            chatWidthLandscape = requireContext().prefs().getInt(C.LANDSCAPE_CHAT_WIDTH, 0)
             resizeMode = requireContext().prefs().getInt(C.ASPECT_RATIO_LANDSCAPE, AspectRatioFrameLayout.RESIZE_MODE_FIT)
             aspectRatioFrameLayout.setAspectRatio(16f / 9f)
             initLayout()
@@ -247,59 +269,22 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
             val touchSlopRange = -touchSlop.toFloat()..touchSlop.toFloat()
             val longPressTimeout = ViewConfiguration.getLongPressTimeout()
             val moveFreely = requireContext().prefs().getBoolean(C.PLAYER_MOVE_FREELY, false)
-            val doubleTap = requireContext().prefs().getBoolean(C.PLAYER_DOUBLE_TAP, true) && !requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)
             val controllerTapDetector = GestureDetector(
                 requireContext(),
                 object : GestureDetector.SimpleOnGestureListener() {
                     override fun onSingleTapUp(e: MotionEvent): Boolean {
-                        return if (!doubleTap || isPortrait) {
-                            val visible = playerControls.root.isVisible
-                            if (visible) {
-                                if (controllerHideOnTouch) {
-                                    hideController()
-                                }
-                            } else {
-                                showController()
+                        val visible = playerControls.root.isVisible
+                        if (visible) {
+                            if (controllerHideOnTouch) {
+                                hideController()
                             }
-                            if (!visible) {
-                                updateProgress()
-                            }
-                            true
                         } else {
-                            false
+                            showController()
                         }
-                    }
-
-                    override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-                        return if (doubleTap && !isPortrait) {
-                            val visible = playerControls.root.isVisible
-                            if (visible) {
-                                if (controllerHideOnTouch) {
-                                    hideController()
-                                }
-                            } else {
-                                showController()
-                            }
-                            if (!visible) {
-                                updateProgress()
-                            }
-                            true
-                        } else {
-                            false
+                        if (!visible) {
+                            updateProgress()
                         }
-                    }
-
-                    override fun onDoubleTap(e: MotionEvent): Boolean {
-                        return if (doubleTap && !isPortrait && isMaximized) {
-                            if (chatLayout.isVisible) {
-                                hideChat()
-                            } else {
-                                showChat()
-                            }
-                            true
-                        } else {
-                            false
-                        }
+                        return true
                     }
                 }
             )
@@ -560,27 +545,6 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                 }
                 true
             }
-            chatTouchView.setOnTouchListener { _, event ->
-                when (event.actionMasked) {
-                    MotionEvent.ACTION_DOWN -> {
-                        chatStatusBarSwipe = !isPortrait && event.y <= 100
-                        chatLinearLayout.dispatchTouchEvent(event)
-                    }
-                    MotionEvent.ACTION_MOVE -> {
-                        if (chatStatusBarSwipe) {
-                            chatLinearLayout.dispatchTouchEvent(
-                                MotionEvent.obtain(event).apply {
-                                    action = MotionEvent.ACTION_CANCEL
-                                }
-                            )
-                        } else {
-                            chatLinearLayout.dispatchTouchEvent(event)
-                        }
-                    }
-                    else -> chatLinearLayout.dispatchTouchEvent(event)
-                }
-                true
-            }
             with(playerControls) {
                 root.setOnTouchListener { _, event ->
                     controllerTapDetector.onTouchEvent(event)
@@ -655,7 +619,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                                 channelId = playbackService?.channelId,
                                 channelLogin = it,
                                 viewerCount = playbackService?.viewerCount,
-                                loop = requireContext().prefs().getBoolean(C.CHAT_DISABLE, false) || !requireContext().prefs().getBoolean(C.CHAT_PUB_SUB_ENABLED, true),
+                                loop = true,
                                 networkLibrary = requireContext().prefs().getString(C.NETWORK_LIBRARY, C.OKHTTP),
                                 helixHeaders = TwitchApiHelper.getHelixHeaders(requireContext()),
                                 gqlHeaders = TwitchApiHelper.getGQLHeaders(requireContext()),
@@ -790,62 +754,19 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                         ).show(childFragmentManager, "closeOnPip")
                     }
                 }
+                if (playbackService?.type != BasePlaybackService.OFFLINE_VIDEO && requireContext().prefs().getBoolean(C.PLAYER_CAST, true)) {
+                    setUpCast()
+                }
                 if (playbackService?.type == BasePlaybackService.STREAM) {
-                    if (!requireContext().tokenPrefs().getString(C.USERNAME, null).isNullOrBlank() &&
-                        (!TwitchApiHelper.getGQLHeaders(requireContext(), true)[C.HEADER_TOKEN].isNullOrBlank() ||
-                                !TwitchApiHelper.getHelixHeaders(requireContext())[C.HEADER_TOKEN].isNullOrBlank())
-                    ) {
-                        if (requireContext().prefs().getBoolean(C.PLAYER_CHAT_BAR_TOGGLE, false) && !requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)) {
-                            toggleChatInput.visibility = View.VISIBLE
-                            toggleChatInput.setOnClickListener {
-                                showController(force = true)
-                                toggleChatBar()
-                            }
-                        }
-                        slidingLayout.viewTreeObserver.addOnGlobalLayoutListener {
-                            if (slidingLayout.isKeyboardShown) {
-                                if (!isKeyboardShown) {
-                                    isKeyboardShown = true
-                                    if (!isPortrait) {
-                                        chatLayout.updateLayoutParams { width = (slidingLayout.width / 1.8f).toInt() }
-                                        showStatusBar()
-                                    }
-                                }
-                            } else {
-                                if (isKeyboardShown) {
-                                    isKeyboardShown = false
-                                    chatLayout.clearFocus()
-                                    if (!isPortrait) {
-                                        chatLayout.updateLayoutParams { width = chatWidthLandscape }
-                                        if (isMaximized) {
-                                            hideStatusBar()
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
                     viewLifecycleOwner.lifecycleScope.launch {
                         repeatOnLifecycle(Lifecycle.State.STARTED) {
                             viewModel.stream.collectLatest { stream ->
                                 if (stream != null) {
                                     stream.id?.let {
                                         playbackService?.streamId = it
-                                        chatFragment?.updateStreamId(it)
                                     }
-                                    if (requireContext().prefs().getBoolean(C.CHAT_DISABLE, false) ||
-                                        !requireContext().prefs().getBoolean(C.CHAT_PUB_SUB_ENABLED, true) ||
-                                        viewersText.text.isNullOrBlank()
-                                    ) {
-                                        updateViewerCount(stream.viewerCount)
-                                    }
-                                    if (requireContext().prefs().getBoolean(C.CHAT_DISABLE, false) ||
-                                        !requireContext().prefs().getBoolean(C.CHAT_PUB_SUB_ENABLED, true) ||
-                                        title.text.isNullOrBlank() ||
-                                        category.text.isNullOrBlank()
-                                    ) {
-                                        updateStreamInfo(stream.title, stream.gameId, stream.gameSlug, stream.gameName)
-                                    }
+                                    updateViewerCount(stream.viewerCount)
+                                    updateStreamInfo(stream.title, stream.gameId, stream.gameSlug, stream.gameName)
                                     if (requireContext().prefs().getBoolean(C.PLAYER_SHOW_UPTIME, true) &&
                                         !uptimeLayout.isVisible
                                     ) {
@@ -958,24 +879,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                     if (!videoId.isNullOrBlank()) {
                         binding.watchVideo.visibility = View.VISIBLE
                         binding.watchVideo.setOnClickListener {
-                            viewLifecycleOwner.lifecycleScope.launch {
-                                val offset = playbackService?.videoOffsetSeconds?.let {
-                                    (it * 1000) + (getCurrentPosition() ?: 0)
-                                } ?: 0
-                                (requireActivity() as MainActivity).startVideo(
-                                    Video(
-                                        id = videoId,
-                                        channelId = playbackService?.channelId,
-                                        channelLogin = playbackService?.channelLogin,
-                                        channelName = playbackService?.channelName,
-                                        channelImageURL = playbackService?.channelImage,
-                                        createdAt = playbackService?.videoCreatedAt,
-                                        animatedPreviewURL = playbackService?.videoAnimatedPreviewURL,
-                                    ),
-                                    offset,
-                                    true
-                                )
-                            }
+                            watchFullVideo()
                         }
                     }
                 } else {
@@ -1085,45 +989,91 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                     }
                 }
             }
-            val currentChatFragment = (childFragmentManager.findFragmentById(R.id.chatFragmentContainer) as? ChatFragment)
-            if (currentChatFragment != null) {
-                chatFragment = currentChatFragment
-            } else {
-                val fragment = when (playbackService?.type) {
-                    BasePlaybackService.STREAM -> ChatFragment.newInstance(
-                        playbackService?.channelId,
-                        playbackService?.channelLogin,
-                        playbackService?.channelName,
-                        playbackService?.streamId,
-                    )
-                    BasePlaybackService.VIDEO -> ChatFragment.newInstance(
-                        playbackService?.channelId,
-                        playbackService?.channelLogin,
-                        playbackService?.videoId,
-                        playbackService?.createdAt,
-                        0,
-                    )
-                    BasePlaybackService.CLIP -> ChatFragment.newInstance(
-                        playbackService?.channelId,
-                        playbackService?.channelLogin,
-                        playbackService?.videoId,
-                        playbackService?.videoCreatedAt,
-                        playbackService?.videoOffsetSeconds.takeIf { it != -1 },
-                    )
-                    BasePlaybackService.OFFLINE_VIDEO -> ChatFragment.newLocalInstance(
-                        playbackService?.channelId,
-                        playbackService?.channelLogin,
-                        playbackService?.videoCreatedAt ?: playbackService?.createdAt?.takeIf { playbackService?.clipId == null },
-                        playbackService?.chatUrl,
-                    )
-                    else -> null
-                }
-                if (fragment != null) {
-                    childFragmentManager.beginTransaction().replace(R.id.chatFragmentContainer, fragment).commit()
-                }
-                chatFragment = fragment
+        }
+    }
+
+    fun canWatchFullVideo() = playbackService?.type == BasePlaybackService.CLIP && !playbackService?.videoId.isNullOrBlank()
+
+    fun watchFullVideo() {
+        val videoId = playbackService?.videoId
+        if (playbackService?.type == BasePlaybackService.CLIP && !videoId.isNullOrBlank()) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val offset = playbackService?.videoOffsetSeconds?.let {
+                    (it * 1000) + (getCurrentPosition() ?: 0)
+                } ?: 0
+                (requireActivity() as MainActivity).startVideo(
+                    Video(
+                        id = videoId,
+                        channelId = playbackService?.channelId,
+                        channelLogin = playbackService?.channelLogin,
+                        channelName = playbackService?.channelName,
+                        channelImageURL = playbackService?.channelImage,
+                        createdAt = playbackService?.videoCreatedAt,
+                        animatedPreviewURL = playbackService?.videoAnimatedPreviewURL,
+                    ),
+                    offset,
+                    true
+                )
             }
         }
+    }
+
+    private fun setUpCast() {
+        if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(requireContext()) != ConnectionResult.SUCCESS) {
+            return
+        }
+        CastContext.getSharedInstance(requireContext(), ContextCompat.getMainExecutor(requireContext())).addOnSuccessListener { castContext ->
+            if (view != null) {
+                this.castContext = castContext
+                CastButtonFactory.setUpMediaRouteButton(requireContext(), binding.playerControls.cast)
+                binding.playerControls.cast.visibility = View.VISIBLE
+                castContext.sessionManager.removeSessionManagerListener(castSessionListener, CastSession::class.java)
+                castContext.sessionManager.addSessionManagerListener(castSessionListener, CastSession::class.java)
+                castContext.sessionManager.currentCastSession?.takeIf { it.isConnected }?.let {
+                    // already connected to a TV, send the newly opened video there
+                    startCasting(it, false)
+                }
+            }
+        }
+    }
+
+    private fun startCasting(session: CastSession, showError: Boolean) {
+        val url = getCastUrl()
+        val remoteMediaClient = session.remoteMediaClient
+        if (url == null || remoteMediaClient == null) {
+            if (showError) {
+                Toast.makeText(requireContext(), R.string.cast_video_unavailable, Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
+        val isLive = playbackService?.type == BasePlaybackService.STREAM
+        val metadata = MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE).apply {
+            (playbackService?.title?.takeIf { it.isNotBlank() } ?: playbackService?.channelName)?.let {
+                putString(MediaMetadata.KEY_TITLE, it)
+            }
+            playbackService?.channelName?.let {
+                putString(MediaMetadata.KEY_SUBTITLE, it)
+            }
+            playbackService?.thumbnail?.takeIf { it.startsWith("http") }?.let {
+                val thumbnail = it.replace(Regex("%?\\{width\\}"), "1280").replace(Regex("%?\\{height\\}"), "720")
+                addImage(WebImage(thumbnail.toUri()))
+            }
+        }
+        val mediaInfo = MediaInfo.Builder(url)
+            .setStreamType(if (isLive) MediaInfo.STREAM_TYPE_LIVE else MediaInfo.STREAM_TYPE_BUFFERED)
+            .setContentType(if (url.toUri().path?.endsWith(".mp4") == true) MimeTypes.VIDEO_MP4 else MimeTypes.APPLICATION_M3U8)
+            .setMetadata(metadata)
+            .build()
+        remoteMediaClient.load(
+            MediaLoadRequestData.Builder().apply {
+                setMediaInfo(mediaInfo)
+                setAutoplay(true)
+                if (!isLive) {
+                    getCurrentPosition()?.let { setCurrentTime(it) }
+                }
+            }.build()
+        )
+        pausePlayback()
     }
 
     private fun initLayout() {
@@ -1136,15 +1086,15 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                     height = ViewGroup.LayoutParams.MATCH_PARENT
                     marginEnd = 0
                 }
-                chatLayout.updateLayoutParams<FrameLayout.LayoutParams> {
+                secondaryLayout.updateLayoutParams<FrameLayout.LayoutParams> {
                     width = ViewGroup.LayoutParams.MATCH_PARENT
                     height = ViewGroup.LayoutParams.MATCH_PARENT
                     gravity = Gravity.BOTTOM
                 }
                 if (isMaximized) {
-                    chatLayout.visibility = View.VISIBLE
+                    secondaryLayout.visibility = View.VISIBLE
                 } else {
-                    chatLayout.visibility = View.GONE
+                    secondaryLayout.visibility = View.GONE
                     val (minimizedScaleX, minimizedScaleY) = getScaleValues()
                     slidingLayout.scaleX = minimizedScaleX
                     slidingLayout.scaleY = minimizedScaleY
@@ -1165,7 +1115,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                 }
                 aspectRatioFrameLayout.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                 playerLayout.isPortrait = true
-                chatLayout.isPortrait = true
+                secondaryLayout.isPortrait = true
                 with(playerControls) {
                     if (requireContext().prefs().getBoolean(C.PLAYER_FULLSCREEN, true)) {
                         fullscreen.visibility = View.VISIBLE
@@ -1176,37 +1126,21 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                         }
                     }
                     aspectRatio.visibility = View.GONE
-                    toggleChat.visibility = View.GONE
                 }
             } else {
                 requireActivity().window.decorView.setOnSystemUiVisibilityChangeListener {
-                    if (!isKeyboardShown && isMaximized && activity != null) {
+                    if (isMaximized && activity != null) {
                         hideStatusBar()
                     }
                 }
                 if (isMaximized) {
                     hideStatusBar()
-                    val chatWidth = if (isChatOpen) chatWidthLandscape else 0
                     playerLayout.updateLayoutParams<FrameLayout.LayoutParams> {
                         width = ViewGroup.LayoutParams.MATCH_PARENT
                         height = ViewGroup.LayoutParams.MATCH_PARENT
-                        marginEnd = chatWidth
+                        marginEnd = 0
                     }
-                    chatLayout.updateLayoutParams<FrameLayout.LayoutParams> {
-                        width = chatWidthLandscape
-                        height = ViewGroup.LayoutParams.MATCH_PARENT
-                        gravity = Gravity.END
-                    }
-                    if (isChatOpen) {
-                        chatLayout.visibility = View.VISIBLE
-                        if (requireView().findViewById<Button>(R.id.btnDown)?.isVisible == false) {
-                            requireView().findViewById<RecyclerView>(R.id.recyclerView)?.let { recyclerView ->
-                                recyclerView.adapter?.itemCount?.let { recyclerView.scrollToPosition(it - 1) }
-                            }
-                        }
-                    } else {
-                        chatLayout.visibility = View.GONE
-                    }
+                    secondaryLayout.visibility = View.GONE
                 } else {
                     showStatusBar()
                     playerLayout.updateLayoutParams<FrameLayout.LayoutParams> {
@@ -1214,12 +1148,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                         height = ViewGroup.LayoutParams.MATCH_PARENT
                         marginEnd = 0
                     }
-                    chatLayout.updateLayoutParams<FrameLayout.LayoutParams> {
-                        width = chatWidthLandscape
-                        height = ViewGroup.LayoutParams.MATCH_PARENT
-                        gravity = Gravity.END
-                    }
-                    chatLayout.visibility = View.GONE
+                    secondaryLayout.visibility = View.GONE
                     val (minimizedScaleX, minimizedScaleY) = getScaleValues()
                     slidingLayout.scaleX = minimizedScaleX
                     slidingLayout.scaleY = minimizedScaleY
@@ -1240,7 +1169,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                 }
                 aspectRatioFrameLayout.resizeMode = resizeMode
                 playerLayout.isPortrait = false
-                chatLayout.isPortrait = false
+                secondaryLayout.isPortrait = false
                 with(playerControls) {
                     if (requireContext().prefs().getBoolean(C.PLAYER_FULLSCREEN, true)) {
                         fullscreen.visibility = View.VISIBLE
@@ -1256,22 +1185,6 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                         aspectRatio.setOnClickListener {
                             showController(force = true)
                             setResizeMode()
-                        }
-                    }
-                    if (requireContext().prefs().getBoolean(C.PLAYER_CHAT_TOGGLE, true) && !requireContext().prefs().getBoolean(C.CHAT_DISABLE, false)) {
-                        toggleChat.visibility = View.VISIBLE
-                        if (isChatOpen) {
-                            toggleChat.setImageResource(R.drawable.baseline_speaker_notes_off_black_24)
-                            toggleChat.setOnClickListener {
-                                showController(force = true)
-                                hideChat()
-                            }
-                        } else {
-                            toggleChat.setImageResource(R.drawable.baseline_speaker_notes_black_24)
-                            toggleChat.setOnClickListener {
-                                showController(force = true)
-                                showChat()
-                            }
                         }
                     }
                 }
@@ -1329,7 +1242,6 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                     VideoQuality.AUTO_QUALITY -> getString(R.string.auto)
                     VideoQuality.SOURCE_QUALITY -> getString(R.string.source)
                     VideoQuality.AUDIO_ONLY_QUALITY -> getString(R.string.audio_only)
-                    VideoQuality.CHAT_ONLY_QUALITY -> getString(R.string.chat_only)
                     else -> {
                         val frameRate = quality.name?.substringAfter("p", "")?.takeWhile { it.isDigit() }?.toIntOrNull()
                         val qualityName = if (frameRate != null && frameRate <= 30) {
@@ -1384,109 +1296,6 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
 
     fun showVolumeDialog() {
         PlayerVolumeDialog.newInstance(getCurrentVolume()).show(childFragmentManager, "closeOnPip")
-    }
-
-    fun getTranslateAllMessages(): Boolean? {
-        return if (!playbackService?.channelId.isNullOrBlank()) {
-            chatFragment?.getTranslateAllMessages()
-        } else null
-    }
-
-    fun saveTranslatedChannel() {
-        playbackService?.channelId?.let {
-            chatFragment?.saveTranslatedChannel(it)
-        }
-    }
-
-    fun deleteTranslatedChannel() {
-        playbackService?.channelId?.let {
-            chatFragment?.deleteTranslatedChannel(it)
-        }
-    }
-
-    fun toggleChatBar() {
-        with(binding) {
-            requireView().findViewById<LinearLayout>(R.id.messageView)?.let {
-                if (it.isVisible) {
-                    (requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(chatLayout.windowToken, 0)
-                    chatLayout.clearFocus()
-                    if (playbackService?.type == BasePlaybackService.STREAM && chatFragment?.emoteMenuIsVisible() == true) {
-                        chatFragment?.toggleEmoteMenu(false)
-                    }
-                    it.visibility = View.GONE
-                    requireContext().prefs().edit { putBoolean(C.KEY_CHAT_BAR_VISIBLE, false) }
-                } else {
-                    it.visibility = View.VISIBLE
-                    requireContext().prefs().edit { putBoolean(C.KEY_CHAT_BAR_VISIBLE, true) }
-                }
-            }
-        }
-    }
-
-    fun hideChat() {
-        isChatOpen = false
-        hideChatLayout()
-        if (requireContext().prefs().getBoolean(C.PLAYER_CHAT_TOGGLE, true)) {
-            binding.playerControls.toggleChat.apply {
-                visibility = View.VISIBLE
-                setImageResource(R.drawable.baseline_speaker_notes_black_24)
-                setOnClickListener {
-                    showController(force = true)
-                    showChat()
-                }
-            }
-        }
-        requireContext().prefs().edit { putBoolean(C.KEY_CHAT_OPENED, false) }
-    }
-
-    fun showChat() {
-        isChatOpen = true
-        showChatLayout()
-        if (requireContext().prefs().getBoolean(C.PLAYER_CHAT_TOGGLE, true)) {
-            binding.playerControls.toggleChat.apply {
-                visibility = View.VISIBLE
-                setImageResource(R.drawable.baseline_speaker_notes_off_black_24)
-                setOnClickListener {
-                    showController(force = true)
-                    hideChat()
-                }
-            }
-        }
-        requireContext().prefs().edit { putBoolean(C.KEY_CHAT_OPENED, true) }
-        if (requireView().findViewById<Button>(R.id.btnDown)?.isVisible == false) {
-            requireView().findViewById<RecyclerView>(R.id.recyclerView)?.let { recyclerView ->
-                recyclerView.adapter?.itemCount?.let { recyclerView.scrollToPosition(it - 1) }
-            }
-        }
-    }
-
-    private fun hideChatLayout() {
-        with(binding) {
-            playerLayout.updateLayoutParams<FrameLayout.LayoutParams> {
-                width = ViewGroup.LayoutParams.MATCH_PARENT
-                height = ViewGroup.LayoutParams.MATCH_PARENT
-                marginEnd = 0
-            }
-            (requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(chatLayout.windowToken, 0)
-            chatLayout.clearFocus()
-            chatLayout.visibility = View.GONE
-        }
-    }
-
-    private fun showChatLayout() {
-        with(binding) {
-            playerLayout.updateLayoutParams<FrameLayout.LayoutParams> {
-                width = ViewGroup.LayoutParams.MATCH_PARENT
-                height = ViewGroup.LayoutParams.MATCH_PARENT
-                marginEnd = chatWidthLandscape
-            }
-            chatLayout.updateLayoutParams<FrameLayout.LayoutParams> {
-                width = chatWidthLandscape
-                height = ViewGroup.LayoutParams.MATCH_PARENT
-                gravity = Gravity.END
-            }
-            chatLayout.visibility = View.VISIBLE
-        }
     }
 
     fun setQualityText() {
@@ -1866,19 +1675,11 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
 
     fun getIsPortrait() = isPortrait
 
-    fun reloadEmotes() = chatFragment?.reloadEmotes()
-
-    fun isActive() = chatFragment?.isActive()
-
-    fun disconnect() = chatFragment?.disconnect()
-
-    fun reconnect() = chatFragment?.reconnect()
-
-    fun secondViewIsHidden() = !binding.chatLayout.isVisible && isMaximized
+    fun secondViewIsHidden() = !binding.secondaryLayout.isVisible && isMaximized
 
     fun canEnterPictureInPicture(): Boolean {
         val quality = playbackService?.quality
-        return quality?.name != VideoQuality.AUDIO_ONLY_QUALITY &&  quality?.name != VideoQuality.CHAT_ONLY_QUALITY
+        return quality?.name != VideoQuality.AUDIO_ONLY_QUALITY
     }
 
     protected fun setPipActions(playing: Boolean) {
@@ -1939,11 +1740,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
             else -> false
         }
         if (isInPIPMode) {
-            if (isPortrait) {
-                binding.chatLayout.visibility = View.GONE
-            } else {
-                hideChatLayout()
-            }
+            binding.secondaryLayout.visibility = View.GONE
             useController = false
         }
     }
@@ -1970,8 +1767,6 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                 else -> false
             }
             if (!isInPIPMode) {
-                (requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(chatLayout.windowToken, 0)
-                chatLayout.clearFocus()
                 initLayout()
             }
             (childFragmentManager.findFragmentByTag("closeOnPip") as? PlayerSettingsDialog?)?.dismiss()
@@ -1984,29 +1779,18 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                 if (!isMaximized) {
                     isMaximized = true
                     requireActivity().onBackPressedDispatcher.addCallback(this@PlayerFragment, backPressedCallback)
-                    if (playbackService?.type == BasePlaybackService.STREAM && chatFragment?.emoteMenuIsVisible() == true) {
-                        chatFragment?.toggleBackPressedCallback(true)
-                    }
                     slidingLayout.translationX = 0f
                     slidingLayout.translationY = 0f
                     slidingLayout.scaleX = 1f
                     slidingLayout.scaleY = 1f
                 }
-                if (isPortrait) {
-                    chatLayout.visibility = View.GONE
-                } else {
-                    hideChatLayout()
-                }
+                secondaryLayout.visibility = View.GONE
                 useController = false
                 controllerAnimation?.cancel()
                 binding.playerControls.root.alpha = 0f
                 binding.playerControls.root.visibility = View.GONE
                 // player dialog
                 (childFragmentManager.findFragmentByTag("closeOnPip") as? BottomSheetDialogFragment)?.dismiss()
-                // player chat message dialog
-                (chatFragment?.childFragmentManager?.findFragmentByTag("messageDialog") as? BottomSheetDialogFragment)?.dismiss()
-                (chatFragment?.childFragmentManager?.findFragmentByTag("replyDialog") as? BottomSheetDialogFragment)?.dismiss()
-                (chatFragment?.childFragmentManager?.findFragmentByTag("imageDialog") as? BottomSheetDialogFragment)?.dismiss()
             } else {
                 useController = true
             }
@@ -2021,9 +1805,6 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
     fun minimize() {
         with(binding) {
             isMaximized = false
-            if (playbackService?.type == BasePlaybackService.STREAM && chatFragment?.emoteMenuIsVisible() == true) {
-                chatFragment?.toggleBackPressedCallback(false)
-            }
             backPressedCallback.remove()
             useController = false
             hideController(true)
@@ -2068,13 +1849,13 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                 }
             }
             if (isPortrait) {
-                chatLayout.visibility = View.GONE
+                secondaryLayout.visibility = View.GONE
                 slidingLayout.doOnLayout {
                     animate()
                 }
             } else {
                 showStatusBar()
-                hideChatLayout()
+                secondaryLayout.visibility = View.GONE
                 slidingLayout.doOnPreDraw {
                     animate()
                 }
@@ -2091,21 +1872,15 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
         with(binding) {
             isMaximized = true
             requireActivity().onBackPressedDispatcher.addCallback(this@PlayerFragment, backPressedCallback)
-            if (playbackService?.type == BasePlaybackService.STREAM && chatFragment?.emoteMenuIsVisible() == true) {
-                chatFragment?.toggleBackPressedCallback(true)
-            }
             useController = true
             if (!controllerHideOnTouch) {
                 showController(force = true)
                 updateProgress()
             }
             if (isPortrait) {
-                chatLayout.visibility = View.VISIBLE
+                secondaryLayout.visibility = View.VISIBLE
             } else {
                 hideStatusBar()
-                if (isChatOpen) {
-                    showChatLayout()
-                }
             }
             slidingLayout.animate().apply {
                 translationX(0f)
@@ -2370,6 +2145,8 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
 
     override fun onDestroyView() {
         super.onDestroyView()
+        castContext?.sessionManager?.removeSessionManagerListener(castSessionListener, CastSession::class.java)
+        castContext = null
         _binding = null
     }
 

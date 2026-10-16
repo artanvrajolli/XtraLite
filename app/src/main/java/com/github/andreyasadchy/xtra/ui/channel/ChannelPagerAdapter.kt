@@ -6,12 +6,10 @@ import com.github.andreyasadchy.xtra.ui.channel.about.ChannelAboutFragment
 import com.github.andreyasadchy.xtra.ui.channel.clips.ChannelClipsFragment
 import com.github.andreyasadchy.xtra.ui.channel.suggestions.ChannelSuggestionsFragment
 import com.github.andreyasadchy.xtra.ui.channel.videos.ChannelVideosFragment
-import com.github.andreyasadchy.xtra.ui.chat.ChatFragment
 import kotlin.math.max
 
 class ChannelPagerAdapter(
     private val fragment: Fragment,
-    private val args: ChannelPagerFragmentArgs,
     private val tabs: List<String>,
 ) : FragmentStateAdapter(fragment) {
 
@@ -20,12 +18,6 @@ class ChannelPagerAdapter(
             "0" -> ChannelSuggestionsFragment().apply { arguments = fragment.arguments }
             "1" -> ChannelVideosFragment().apply { arguments = fragment.arguments }
             "2" -> ChannelClipsFragment().apply { arguments = fragment.arguments }
-            "3" -> ChatFragment.newInstance(
-                channelId = args.channelId,
-                channelLogin = args.channelLogin,
-                channelName = args.channelName,
-                streamId = args.streamId
-            )
             "4" -> ChannelAboutFragment().apply { arguments = fragment.arguments }
             else -> ChannelVideosFragment().apply { arguments = fragment.arguments }
         }

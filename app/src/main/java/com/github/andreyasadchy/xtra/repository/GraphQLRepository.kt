@@ -10,10 +10,8 @@ import com.apollographql.apollo.api.json.buildJsonString
 import com.apollographql.apollo.api.json.jsonReader
 import com.apollographql.apollo.api.json.writeObject
 import com.apollographql.apollo.api.parseResponse
-import com.github.andreyasadchy.xtra.graphql.BadgesQuery
 import com.github.andreyasadchy.xtra.graphql.ClipQuery
 import com.github.andreyasadchy.xtra.graphql.ClipUrlsQuery
-import com.github.andreyasadchy.xtra.graphql.EmoteQuery
 import com.github.andreyasadchy.xtra.graphql.GameBoxArtQuery
 import com.github.andreyasadchy.xtra.graphql.GameClipsQuery
 import com.github.andreyasadchy.xtra.graphql.GameQuery
@@ -35,17 +33,13 @@ import com.github.andreyasadchy.xtra.graphql.TeamQuery
 import com.github.andreyasadchy.xtra.graphql.TopGamesQuery
 import com.github.andreyasadchy.xtra.graphql.TopStreamsQuery
 import com.github.andreyasadchy.xtra.graphql.UserAboutQuery
-import com.github.andreyasadchy.xtra.graphql.UserBadgesQuery
 import com.github.andreyasadchy.xtra.graphql.UserChannelPageQuery
 import com.github.andreyasadchy.xtra.graphql.UserChattersQuery
-import com.github.andreyasadchy.xtra.graphql.UserCheerEmotesQuery
 import com.github.andreyasadchy.xtra.graphql.UserClipsQuery
-import com.github.andreyasadchy.xtra.graphql.UserEmotesQuery
 import com.github.andreyasadchy.xtra.graphql.UserFollowedGamesQuery
 import com.github.andreyasadchy.xtra.graphql.UserFollowedStreamsQuery
 import com.github.andreyasadchy.xtra.graphql.UserFollowedUsersQuery
 import com.github.andreyasadchy.xtra.graphql.UserFollowedVideosQuery
-import com.github.andreyasadchy.xtra.graphql.UserMessageClickedQuery
 import com.github.andreyasadchy.xtra.graphql.UserQuery
 import com.github.andreyasadchy.xtra.graphql.UserResultIDQuery
 import com.github.andreyasadchy.xtra.graphql.UserResultLoginQuery
@@ -53,11 +47,9 @@ import com.github.andreyasadchy.xtra.graphql.UserVideosQuery
 import com.github.andreyasadchy.xtra.graphql.UsersLastBroadcastQuery
 import com.github.andreyasadchy.xtra.graphql.UsersStreamQuery
 import com.github.andreyasadchy.xtra.graphql.UsersTypeQuery
-import com.github.andreyasadchy.xtra.graphql.VideoCommentsQuery
 import com.github.andreyasadchy.xtra.graphql.VideoMomentsQuery
 import com.github.andreyasadchy.xtra.graphql.VideoPlaybackAccessTokenQuery
 import com.github.andreyasadchy.xtra.graphql.VideoQuery
-import com.github.andreyasadchy.xtra.graphql.type.BadgeImageSize
 import com.github.andreyasadchy.xtra.graphql.type.BroadcastType
 import com.github.andreyasadchy.xtra.graphql.type.ClipsPeriod
 import com.github.andreyasadchy.xtra.graphql.type.Language
@@ -68,14 +60,6 @@ import com.github.andreyasadchy.xtra.model.gql.channel.ChannelClipsResponse
 import com.github.andreyasadchy.xtra.model.gql.channel.ChannelSuggestionsResponse
 import com.github.andreyasadchy.xtra.model.gql.channel.ChannelVideosResponse
 import com.github.andreyasadchy.xtra.model.gql.channel.ChannelViewerListResponse
-import com.github.andreyasadchy.xtra.model.gql.chat.BadgesResponse
-import com.github.andreyasadchy.xtra.model.gql.chat.ChannelCheerEmotesResponse
-import com.github.andreyasadchy.xtra.model.gql.chat.ChannelPointContextResponse
-import com.github.andreyasadchy.xtra.model.gql.chat.EmoteCardResponse
-import com.github.andreyasadchy.xtra.model.gql.chat.GlobalCheerEmotesResponse
-import com.github.andreyasadchy.xtra.model.gql.chat.ModeratorsResponse
-import com.github.andreyasadchy.xtra.model.gql.chat.UserEmotesResponse
-import com.github.andreyasadchy.xtra.model.gql.chat.VipsResponse
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipDataResponse
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipUrlsResponse
 import com.github.andreyasadchy.xtra.model.gql.clip.ClipVideoResponse
@@ -97,7 +81,6 @@ import com.github.andreyasadchy.xtra.model.gql.stream.StreamsResponse
 import com.github.andreyasadchy.xtra.model.gql.stream.ViewerCountResponse
 import com.github.andreyasadchy.xtra.model.gql.tag.TagResponse
 import com.github.andreyasadchy.xtra.model.gql.video.VideoGamesResponse
-import com.github.andreyasadchy.xtra.model.gql.video.VideoMessagesResponse
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.NetworkUtils
 import com.github.andreyasadchy.xtra.util.NetworkUtils.executeAsync
@@ -263,11 +246,6 @@ class GraphQLRepository(
         }
     }
 
-    suspend fun loadQueryBadges(networkLibrary: String?, headers: Map<String, String>, quality: BadgeImageSize): ApolloResponse<BadgesQuery.Data> = withContext(Dispatchers.IO) {
-        val query = BadgesQuery(Optional.Present(quality))
-        sendQuery(networkLibrary, headers, query)
-    }
-
     suspend fun loadQueryClip(networkLibrary: String?, headers: Map<String, String>, slug: String): ApolloResponse<ClipQuery.Data> = withContext(Dispatchers.IO) {
         val query = ClipQuery(slug)
         sendQuery(networkLibrary, headers, query)
@@ -275,11 +253,6 @@ class GraphQLRepository(
 
     suspend fun loadQueryClipUrls(networkLibrary: String?, headers: Map<String, String>, slug: String): ApolloResponse<ClipUrlsQuery.Data> = withContext(Dispatchers.IO) {
         val query = ClipUrlsQuery(slug)
-        sendQuery(networkLibrary, headers, query)
-    }
-
-    suspend fun loadQueryEmote(networkLibrary: String?, headers: Map<String, String>, id: String): ApolloResponse<EmoteQuery.Data> = withContext(Dispatchers.IO) {
-        val query = EmoteQuery(id)
         sendQuery(networkLibrary, headers, query)
     }
 
@@ -483,15 +456,6 @@ class GraphQLRepository(
         sendQuery(networkLibrary, headers, query)
     }
 
-    suspend fun loadQueryUserBadges(networkLibrary: String?, headers: Map<String, String>, id: String? = null, login: String? = null, quality: BadgeImageSize?): ApolloResponse<UserBadgesQuery.Data> = withContext(Dispatchers.IO) {
-        val query = UserBadgesQuery(
-            id = if (!id.isNullOrBlank()) Optional.Present(id) else Optional.Absent,
-            login = if (!login.isNullOrBlank()) Optional.Present(login) else Optional.Absent,
-            quality = Optional.Present(quality),
-        )
-        sendQuery(networkLibrary, headers, query)
-    }
-
     suspend fun loadQueryUserChannelPage(networkLibrary: String?, headers: Map<String, String>, id: String? = null, login: String? = null): ApolloResponse<UserChannelPageQuery.Data> = withContext(Dispatchers.IO) {
         val query = UserChannelPageQuery(
             id = if (!id.isNullOrBlank()) Optional.Present(id) else Optional.Absent,
@@ -508,14 +472,6 @@ class GraphQLRepository(
         sendQuery(networkLibrary, headers, query)
     }
 
-    suspend fun loadQueryUserCheerEmotes(networkLibrary: String?, headers: Map<String, String>, id: String? = null, login: String? = null): ApolloResponse<UserCheerEmotesQuery.Data> = withContext(Dispatchers.IO) {
-        val query = UserCheerEmotesQuery(
-            id = if (!id.isNullOrBlank()) Optional.Present(id) else Optional.Absent,
-            login = if (!login.isNullOrBlank()) Optional.Present(login) else Optional.Absent,
-        )
-        sendQuery(networkLibrary, headers, query)
-    }
-
     suspend fun loadQueryUserClips(networkLibrary: String?, headers: Map<String, String>, id: String?, login: String?, period: ClipsPeriod?, first: Int?, after: String?): ApolloResponse<UserClipsQuery.Data> = withContext(Dispatchers.IO) {
         val query = UserClipsQuery(
             id = if (!id.isNullOrBlank()) Optional.Present(id) else Optional.Absent,
@@ -524,11 +480,6 @@ class GraphQLRepository(
             first = Optional.Present(first),
             after = Optional.Present(after),
         )
-        sendQuery(networkLibrary, headers, query)
-    }
-
-    suspend fun loadQueryUserEmotes(networkLibrary: String?, headers: Map<String, String>): ApolloResponse<UserEmotesQuery.Data> = withContext(Dispatchers.IO) {
-        val query = UserEmotesQuery()
         sendQuery(networkLibrary, headers, query)
     }
 
@@ -561,15 +512,6 @@ class GraphQLRepository(
             type = Optional.Present(type),
             first = Optional.Present(first),
             after = Optional.Present(after),
-        )
-        sendQuery(networkLibrary, headers, query)
-    }
-
-    suspend fun loadQueryUserMessageClicked(networkLibrary: String?, headers: Map<String, String>, id: String? = null, login: String? = null, targetId: String?): ApolloResponse<UserMessageClickedQuery.Data> = withContext(Dispatchers.IO) {
-        val query = UserMessageClickedQuery(
-            id = if (!id.isNullOrBlank()) Optional.Present(id) else Optional.Absent,
-            login = if (!login.isNullOrBlank()) Optional.Present(login) else Optional.Absent,
-            targetId = Optional.Present(targetId),
         )
         sendQuery(networkLibrary, headers, query)
     }
@@ -623,93 +565,6 @@ class GraphQLRepository(
     suspend fun loadQueryVideo(networkLibrary: String?, headers: Map<String, String>, id: String?): ApolloResponse<VideoQuery.Data> = withContext(Dispatchers.IO) {
         val query = VideoQuery(Optional.Present(id))
         sendQuery(networkLibrary, headers, query)
-    }
-
-    suspend fun loadQueryVideoComments(networkLibrary: String?, headers: Map<String, String>, videoId: String?, offset: Int? = null, cursor: String? = null): ApolloResponse<VideoCommentsQuery.Data> = withContext(Dispatchers.IO) {
-        val query = VideoCommentsQuery(
-            id = Optional.Present(videoId),
-            first = Optional.Present(100),
-            after = Optional.Present(cursor),
-            offset = if (offset != null) Optional.Present(offset) else Optional.Absent,
-        )
-        sendQuery(networkLibrary, headers, query)
-    }
-
-    suspend fun loadQueryVideoCommentsDownload(networkLibrary: String?, timeout: Long, okHttpClient: Lazy<OkHttpClient>, headers: Map<String, String>, videoId: String?, offset: Int? = null, cursor: String? = null): VideoMessagesResponse = withContext(Dispatchers.IO) {
-        val url = "https://gql.twitch.tv/gql"
-        val query = VideoCommentsQuery(
-            id = Optional.Present(videoId),
-            first = Optional.Present(100),
-            after = Optional.Present(cursor),
-            offset = if (offset != null) Optional.Present(offset) else Optional.Absent,
-        )
-        val body = buildJsonString {
-            query.apply {
-                writeObject {
-                    name("variables")
-                    writeObject {
-                        serializeVariables(this, CustomScalarAdapters.Empty, false)
-                    }
-                    name("query")
-                    value(document().replaceFirst(name(), "null"))
-                }
-            }
-        }
-        val response = when {
-            networkLibrary == C.HTTP_ENGINE && httpEngine.value != null -> @SuppressLint("NewApi") {
-                val response = suspendCancellableCoroutine { continuation ->
-                    val timeout = NetworkUtils.HttpEngineTimeout(timeout)
-                    val request = httpEngine.value!!.newUrlRequestBuilder(
-                        url,
-                        cronetExecutor.value,
-                        NetworkUtils.ByteArrayUrlCallback(continuation, timeout)
-                    ).apply {
-                        headers.forEach { addHeader(it.key, it.value) }
-                        addHeader("Content-Type", "application/json")
-                        setUploadDataProvider(NetworkUtils.ByteArrayUploadProvider(body.toByteArray()), cronetExecutor.value)
-                    }.build()
-                    timeout.start(request, continuation)
-                    request.start()
-                    continuation.invokeOnCancellation {
-                        request.cancel()
-                        timeout.stop()
-                    }
-                }
-                response.body.decodeToString()
-            }
-            networkLibrary == C.CRONET && cronetEngine.value != null -> {
-                val response = suspendCancellableCoroutine { continuation ->
-                    val timeout = NetworkUtils.CronetTimeout(timeout)
-                    val request = cronetEngine.value!!.newUrlRequestBuilder(
-                        url,
-                        NetworkUtils.ByteArrayCronetCallback(continuation, timeout),
-                        cronetExecutor.value
-                    ).apply {
-                        headers.forEach { addHeader(it.key, it.value) }
-                        addHeader("Content-Type", "application/json")
-                        setUploadDataProvider(UploadDataProviders.create(body.toByteArray()), cronetExecutor.value)
-                    }.build()
-                    timeout.start(request, continuation)
-                    request.start()
-                    continuation.invokeOnCancellation {
-                        request.cancel()
-                        timeout.stop()
-                    }
-                }
-                response.body.decodeToString()
-            }
-            else -> {
-                okHttpClient.value.newCall(Request.Builder().apply {
-                    url(url)
-                    headers(headers.toHeaders())
-                    header("Content-Type", "application/json")
-                    post(body.toRequestBody())
-                }.build()).executeAsync().use { response ->
-                    response.body.string()
-                }
-            }
-        }
-        json.decodeFromString<VideoMessagesResponse>(response)
     }
 
     suspend fun loadQueryVideoMoments(networkLibrary: String?, headers: Map<String, String>, videoId: String?): ApolloResponse<VideoMomentsQuery.Data> = withContext(Dispatchers.IO) {
@@ -1164,51 +1019,6 @@ class GraphQLRepository(
         json.decodeFromString<SearchGameTagsResponse>(sendPersistedQuery(networkLibrary, headers, body))
     }
 
-    suspend fun loadChatBadges(networkLibrary: String?, headers: Map<String, String>, channelLogin: String?): BadgesResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "dd0997370fb7ca288bc52a96a9a7e3222c75c4a9a9b03df17d779666f07f7529")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "ChatList_Badges")
-            putJsonObject("variables") {
-                put("channelLogin", channelLogin)
-            }
-        }.toString()
-        json.decodeFromString<BadgesResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun loadGlobalCheerEmotes(networkLibrary: String?, headers: Map<String, String>): GlobalCheerEmotesResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "6a265b86f3be1c8d11bdcf32c183e106028c6171e985cc2584d15f7840f5fee6")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "BitsConfigContext_Global")
-        }.toString()
-        json.decodeFromString<GlobalCheerEmotesResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun loadChannelCheerEmotes(networkLibrary: String?, headers: Map<String, String>, channelLogin: String?): ChannelCheerEmotesResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "d897953c76165a0d2a12b57c9c013a77b3cf02b5c153645e1e1631f763bf1eb5")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "BitsConfigContext_Channel")
-            putJsonObject("variables") {
-                put("login", channelLogin)
-            }
-        }.toString()
-        json.decodeFromString<ChannelCheerEmotesResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
     private fun getVideoMessagesRequestBody(videoId: String?, offset: Int?, cursor: String?): String {
         return buildJsonObject {
             putJsonObject("extensions") {
@@ -1224,11 +1034,6 @@ class GraphQLRepository(
                 put("videoID", videoId)
             }
         }.toString()
-    }
-
-    suspend fun loadVideoMessages(networkLibrary: String?, headers: Map<String, String>, videoId: String?, offset: Int? = null, cursor: String? = null): VideoMessagesResponse = withContext(Dispatchers.IO) {
-        val body = getVideoMessagesRequestBody(videoId, offset, cursor)
-        json.decodeFromString<VideoMessagesResponse>(sendPersistedQuery(networkLibrary, headers, body))
     }
 
     suspend fun loadVideoGames(networkLibrary: String?, headers: Map<String, String>, videoId: String?): VideoGamesResponse = withContext(Dispatchers.IO) {
@@ -1277,24 +1082,6 @@ class GraphQLRepository(
             }
         }.toString()
         json.decodeFromString<ViewerCountResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun loadEmoteCard(networkLibrary: String?, headers: Map<String, String>, emoteId: String?): EmoteCardResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "65ac84241dfe071efc00be7aebcc4064eec8164acb477a2e4a06e56dceb66013")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "EmoteCard")
-            putJsonObject("variables") {
-                put("emoteID", emoteId)
-                put("octaneEnabled", true)
-                put("artistEnabled", true)
-            }
-        }.toString()
-        json.decodeFromString<EmoteCardResponse>(sendPersistedQuery(networkLibrary, headers, body))
     }
 
     suspend fun loadFollowedStreams(networkLibrary: String?, headers: Map<String, String>, limit: Int?, cursor: String?): FollowedStreamsResponse = withContext(Dispatchers.IO) {
@@ -1461,395 +1248,4 @@ class GraphQLRepository(
         json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
     }
 
-    suspend fun loadChannelPointsContext(networkLibrary: String?, headers: Map<String, String>, channelLogin: String?): ChannelPointContextResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "33884dcfeab64eb44c2d61255145643cf69ea993e0c6c2ecb0fa46238586a111")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "ChannelPointsContext")
-            putJsonObject("variables") {
-                put("channelLogin", channelLogin)
-                putJsonArray("includeGoalTypes") {
-                    add("CREATOR")
-                    add("BOOST")
-                }
-            }
-        }.toString()
-        json.decodeFromString<ChannelPointContextResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun loadClaimPoints(networkLibrary: String?, headers: Map<String, String>, channelId: String?, claimId: String?): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "46aaeebe02c99afdf4fc97c7c0cba964124bf6b0af229395f1f6d1feed05b3d0")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "ClaimCommunityPoints")
-            putJsonObject("variables") {
-                putJsonObject("input") {
-                    put("channelID", channelId)
-                    put("claimID", claimId)
-                }
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun loadJoinRaid(networkLibrary: String?, headers: Map<String, String>, raidId: String?): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "c6a332a86d1087fbbb1a8623aa01bd1313d2386e7c63be60fdb2d1901f01a4ae")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "JoinRaid")
-            putJsonObject("variables") {
-                putJsonObject("input") {
-                    put("raidID", raidId)
-                }
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun loadUserEmotes(networkLibrary: String?, headers: Map<String, String>, channelId: String?, cursor: String?): UserEmotesResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "6c45e0ecaa823cc7db3ecdd1502af2223c775bdcfb0f18a3a0ce9a0b7db8ef6c")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "AvailableEmotesForChannelPaginated")
-            putJsonObject("variables") {
-                put("cursor", cursor)
-                put("channelID", channelId)
-                put("pageLimit", 350)
-                put("withOwner", true)
-            }
-        }.toString()
-        json.decodeFromString<UserEmotesResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun sendMessage(networkLibrary: String?, headers: Map<String, String>, channelId: String?, message: String?, replyId: String?): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "0435464292cf380ed4b3d905e4edcb73078362e82c06367a5b2181c76c822fa2")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "sendChatMessage")
-            putJsonObject("variables") {
-                putJsonObject("input") {
-                    put("channelID", channelId)
-                    put("message", message)
-                    put("replyParentMessageID", replyId)
-                }
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun sendAnnouncement(networkLibrary: String?, headers: Map<String, String>, channelId: String?, message: String?, color: String?): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "f9e37b572ceaca1475d8d50805ae64d6eb388faf758556b2719f44d64e5ba791")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "SendAnnouncementMessage")
-            putJsonObject("variables") {
-                putJsonObject("input") {
-                    put("channelID", channelId)
-                    put("message", message)
-                    put("color", color)
-                }
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun banUser(networkLibrary: String?, headers: Map<String, String>, channelId: String?, targetLogin: String?, duration: String? = null, reason: String?): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "d7be2d2e1e22813c1c2f3d9d5bf7e425d815aeb09e14001a5f2c140b93f6fb67")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "Chat_BanUserFromChatRoom")
-            putJsonObject("variables") {
-                putJsonObject("input") {
-                    put("channelID", channelId)
-                    put("bannedUserLogin", targetLogin)
-                    put("expiresIn", duration)
-                    put("reason", reason)
-                }
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun unbanUser(networkLibrary: String?, headers: Map<String, String>, channelId: String?, targetLogin: String?): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "bee22da7ae03569eb9ae41ef857fd1bb75507d4984d764a81fe8775accac71bd")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "Chat_UnbanUserFromChatRoom")
-            putJsonObject("variables") {
-                putJsonObject("input") {
-                    put("channelID", channelId)
-                    put("bannedUserLogin", targetLogin)
-                }
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun updateChatColor(networkLibrary: String?, headers: Map<String, String>, color: String?): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "0371259a74a3db4ff4bf4473d998d8ae8e4f135b20403323691d434f2790e081")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "Chat_UpdateChatColor")
-            putJsonObject("variables") {
-                putJsonObject("input") {
-                    put("color", color)
-                }
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun updateChatSettings(networkLibrary: String?, headers: Map<String, String>, channelId: String?, emote: Boolean? = null): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "6d8b11f4e29f87be5e2397dd54b2df669e9a5aacd831252d88b7b7a6616dc170")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "UpdateChatSettings")
-            putJsonObject("variables") {
-                putJsonObject("input") {
-                    put("channelID", channelId)
-                    emote?.let { put("isEmoteOnlyModeEnabled", it) }
-                }
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun setFollowersOnlyMode(networkLibrary: String?, headers: Map<String, String>, channelId: String?, duration: Int?): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "0ee2e448691c84b4be72bcd1ae6c51fcf512414fe372e502fe67d3c7eaf8da31")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "SetFollowersOnlyModeSetting")
-            putJsonObject("variables") {
-                putJsonObject("input") {
-                    put("channelID", channelId)
-                    put("followersOnlyDurationMinutes", duration)
-                }
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun setSlowMode(networkLibrary: String?, headers: Map<String, String>, channelId: String?, duration: Int?): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "8cf824c7fbe97e1fbde96125bffabd5b315b7f370c2ddae317f058a7b9b1c57d")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "SetSlowModeSetting")
-            putJsonObject("variables") {
-                putJsonObject("input") {
-                    put("channelID", channelId)
-                    put("slowModeDurationSeconds", duration)
-                }
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun createStreamMarker(networkLibrary: String?, headers: Map<String, String>, channelLogin: String?): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "c65f8b33e3bcccf2b16057e8f445311d213ecf8729f842ccdc71908231fa9a78")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "VideoMarkersChatCommand")
-            putJsonObject("variables") {
-                put("channelLogin", channelLogin)
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun getModerators(networkLibrary: String?, headers: Map<String, String>, channelLogin: String?): ModeratorsResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "cb912a7e0789e0f8a4c85c25041a08324475831024d03d624172b59498caf085")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "Mods")
-            putJsonObject("variables") {
-                put("login", channelLogin)
-            }
-        }.toString()
-        json.decodeFromString<ModeratorsResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun addModerator(networkLibrary: String?, headers: Map<String, String>, channelId: String?, targetLogin: String?): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "46da4ec4229593fe4b1bce911c75625c299638e228262ff621f80d5067695a8a")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "ModUser")
-            putJsonObject("variables") {
-                putJsonObject("input") {
-                    put("channelID", channelId)
-                    put("targetLogin", targetLogin)
-                }
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun removeModerator(networkLibrary: String?, headers: Map<String, String>, channelId: String?, targetLogin: String?): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "1ed42ccb3bc3a6e79f51e954a2df233827f94491fbbb9bd05b22b1aaaf219b8b")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "UnmodUser")
-            putJsonObject("variables") {
-                putJsonObject("input") {
-                    put("channelID", channelId)
-                    put("targetLogin", targetLogin)
-                }
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun startRaid(networkLibrary: String?, headers: Map<String, String>, channelId: String?, targetId: String?): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "f4fc7ac482599d81dfb6aa37100923c8c9edeea9ca2be854102a6339197f840a")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "chatCreateRaid")
-            putJsonObject("variables") {
-                putJsonObject("input") {
-                    put("sourceID", channelId)
-                    put("targetID", targetId)
-                }
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun cancelRaid(networkLibrary: String?, headers: Map<String, String>, channelId: String?): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "c388b89e7616a11a8a07b75e3d7bbe7278d37c3c46f43d7c8d4d0262edc00cd9")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "chatCancelRaid")
-            putJsonObject("variables") {
-                putJsonObject("input") {
-                    put("sourceID", channelId)
-                }
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun getVips(networkLibrary: String?, headers: Map<String, String>, channelLogin: String?): VipsResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "612a574d07afe5db2f9e878e290225224a0b955e65b5d1235dcd4b68ff668218")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "VIPs")
-            putJsonObject("variables") {
-                put("login", channelLogin)
-            }
-        }.toString()
-        json.decodeFromString<VipsResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun addVip(networkLibrary: String?, headers: Map<String, String>, channelId: String?, targetLogin: String?): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "e8c397f1ed8b1fdbaa201eedac92dd189ecfb2d828985ec159d4ae77f9920170")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "VIPUser")
-            putJsonObject("variables") {
-                putJsonObject("input") {
-                    put("channelID", channelId)
-                    put("granteeLogin", targetLogin)
-                }
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
-
-    suspend fun removeVip(networkLibrary: String?, headers: Map<String, String>, channelId: String?, targetLogin: String?): ErrorResponse = withContext(Dispatchers.IO) {
-        val body = buildJsonObject {
-            putJsonObject("extensions") {
-                putJsonObject("persistedQuery") {
-                    put("sha256Hash", "2ce4fcdf6667d013aa1f820010e699d1d4abdda55e26539ecf4efba8aff2d661")
-                    put("version", 1)
-                }
-            }
-            put("operationName", "UnVIPUser")
-            putJsonObject("variables") {
-                putJsonObject("input") {
-                    put("channelID", channelId)
-                    put("revokeeLogin", targetLogin)
-                }
-            }
-        }.toString()
-        json.decodeFromString<ErrorResponse>(sendPersistedQuery(networkLibrary, headers, body))
-    }
 }

@@ -276,6 +276,10 @@ class XtraModule(application: Application) {
                 },
                 Migration(39, 40) { db ->
                     db.execSQL("CREATE TABLE IF NOT EXISTS video_swap (platform TEXT, playerType TEXT, position INTEGER NOT NULL, enabled INTEGER NOT NULL, id INTEGER NOT NULL, PRIMARY KEY (id))")
+                },
+                Migration(40, 41) { db ->
+                    db.execSQL("DROP TABLE IF EXISTS recent_emotes")
+                    db.execSQL("DROP TABLE IF EXISTS translate_all_messages")
                 }
             )
         }.build()
@@ -322,7 +326,7 @@ class XtraModule(application: Application) {
     }
 
     val playerRepository by lazy {
-        PlayerRepository(httpEngine, cronetEngine, cronetExecutor, okHttpClient, json, database.recentEmotes(), database.translatedChannels(), database.customProxies(), database.streamProxies(), database.videoSwap(), database.videoPositions(), database.playbackStates(), graphQLRepository, helixRepository)
+        PlayerRepository(httpEngine, cronetEngine, cronetExecutor, okHttpClient, json, database.customProxies(), database.streamProxies(), database.videoSwap(), database.videoPositions(), database.playbackStates(), graphQLRepository, helixRepository)
     }
 
     val recentSearchesRepository by lazy {

@@ -154,7 +154,6 @@
         <item>360p</item>
         <item>160p</item>
         <item>@string/audio_only</item>
-        <item>@string/chat_only</item>
     </string-array>
 
     <string-array name="playerQualityValues">
@@ -169,7 +168,6 @@
         <item>360</item>
         <item>160</item>
         <item>audio_only</item>
-        <item>chat_only</item>
     </string-array>
 
     <string-array name="languageEntries">

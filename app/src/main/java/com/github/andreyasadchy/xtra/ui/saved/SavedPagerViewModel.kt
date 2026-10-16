@@ -155,7 +155,6 @@ class SavedPagerViewModel(
                         maxProgress = 100,
                         status = OfflineVideo.STATUS_DOWNLOADED,
                         videoId = if (!id.isNullOrBlank()) id else null,
-                        chatUrl = chatFileUri
                     ))
                 }
             }
@@ -234,7 +233,6 @@ class SavedPagerViewModel(
                             maxProgress = 100,
                             status = OfflineVideo.STATUS_DOWNLOADED,
                             videoId = if (!id.isNullOrBlank()) id else null,
-                            chatUrl = chatFile
                         )
                     )
                 }

@@ -1,34 +1,6 @@
 <androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <SwitchPreferenceCompat
-        android:defaultValue="false"
-        android:key="debug_chat_fullmsg"
-        android:title="@string/show_copy_fullmsg"
-        app:iconSpaceReserved="false"
-        app:singleLineTitle="false" />
-
-    <SwitchPreferenceCompat
-        android:defaultValue="true"
-        android:key="debug_api_commands"
-        android:title="@string/debug_api_commands"
-        app:iconSpaceReserved="false"
-        app:singleLineTitle="false" />
-
-    <SwitchPreferenceCompat
-        android:defaultValue="true"
-        android:key="debug_api_chat_messages"
-        android:title="@string/use_api_chat_messages"
-        app:iconSpaceReserved="false"
-        app:singleLineTitle="false" />
-
-    <SwitchPreferenceCompat
-        android:defaultValue="false"
-        android:key="debug_websocket_info"
-        android:title="@string/show_more_websocket_info"
-        app:iconSpaceReserved="false"
-        app:singleLineTitle="false" />
-
     <ListPreference
         android:defaultValue="ExoPlayer"
         android:entries="@array/playerEntries"
@@ -36,13 +8,6 @@
         android:key="player"
         android:summary="%s"
         android:title="@string/player"
-        app:iconSpaceReserved="false"
-        app:singleLineTitle="false" />
-
-    <SwitchPreferenceCompat
-        android:defaultValue="false"
-        android:key="debug_eventsub_chat"
-        android:title="@string/use_eventsub_chat"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 

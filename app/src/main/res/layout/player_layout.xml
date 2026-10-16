@@ -321,24 +321,12 @@
             app:tint="@android:color/white"
             tools:visibility="visible" />
 
-        <ImageButton
-            android:id="@+id/toggleChatInput"
+        <androidx.mediarouter.app.MediaRouteButton
+            android:id="@+id/cast"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="@android:color/transparent"
-            android:src="@drawable/baseline_keyboard_black_24"
             android:visibility="gone"
-            app:tint="@android:color/white"
-            tools:visibility="visible" />
-
-        <ImageButton
-            android:id="@+id/toggleChat"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@android:color/transparent"
-            android:src="@drawable/baseline_speaker_notes_black_24"
-            android:visibility="gone"
-            app:tint="@android:color/white"
+            app:mediaRouteButtonTint="@android:color/white"
             tools:visibility="visible" />
 
         <ImageButton

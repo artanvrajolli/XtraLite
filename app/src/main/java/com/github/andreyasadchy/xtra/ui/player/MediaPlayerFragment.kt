@@ -42,12 +42,10 @@ class MediaPlayerFragment : PlayerFragment() {
                 binding.playerControls.progressBar.setDuration(duration)
                 binding.playerControls.duration.text = DateUtils.formatElapsedTime(duration / 1000)
                 updatePlayingState()
-                chatFragment?.startReplayChatLoad()
             }
 
             override fun onSeekComplete(player: MediaPlayer) {
                 updatePlayingState()
-                chatFragment?.updatePosition(player.currentPosition.toLong())
             }
 
             override fun onCompletion(player: MediaPlayer) {
@@ -75,10 +73,6 @@ class MediaPlayerFragment : PlayerFragment() {
             override fun onIsPlayingChanged() {
                 updatePlayingState()
             }
-
-            override fun onSpeedChanged(speed: Float) {
-                chatFragment?.updateSpeed(speed)
-            }
         }
         val serviceListener = object : MediaPlayerService.Listener {
             override fun started() {
@@ -89,7 +83,6 @@ class MediaPlayerFragment : PlayerFragment() {
                             start()
                         }
                     } else {
-                        chatFragment?.startReplayChatLoad()
                         if (playbackService?.restoreQuality == true) {
                             playbackService?.restoreQuality = false
                             changeQuality(playbackService?.previousQuality)
@@ -237,7 +230,6 @@ class MediaPlayerFragment : PlayerFragment() {
                                 start()
                             }
                         } else {
-                            chatFragment?.startReplayChatLoad()
                             if (playbackService?.restoreQuality == true) {
                                 playbackService?.restoreQuality = false
                                 changeQuality(playbackService?.previousQuality)
@@ -300,6 +292,20 @@ class MediaPlayerFragment : PlayerFragment() {
 
     override fun getTotalDuration() = playbackService?.player?.duration?.toLong()
 
+    override fun pausePlayback() {
+        playbackService?.player?.let { player ->
+            if (player.isPlaying) {
+                player.pause()
+                playbackService?.updatePlayingState()
+                updatePlayingState()
+            }
+        }
+    }
+
+    override fun getCastUrl(): String? {
+        return playbackService?.quality?.url?.takeIf { it.startsWith("http") }
+    }
+
     override fun playPause() {
         playbackService?.player?.let { player ->
             if (player.isPlaying) {
@@ -348,7 +354,6 @@ class MediaPlayerFragment : PlayerFragment() {
         val params = PlaybackParams()
         params.speed = speed
         playbackService?.player?.playbackParams = params
-        chatFragment?.updateSpeed(speed)
     }
 
     override fun changeVolume(volume: Float) {

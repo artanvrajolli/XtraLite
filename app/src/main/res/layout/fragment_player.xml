@@ -52,42 +52,24 @@
 
         </com.github.andreyasadchy.xtra.ui.view.PlayerLayout>
 
-        <com.github.andreyasadchy.xtra.ui.view.ChatLayout
-            android:id="@+id/chatLayout"
+        <com.github.andreyasadchy.xtra.ui.view.SecondaryLayout
+            android:id="@+id/secondaryLayout"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:background="?android:colorBackground">
 
-            <LinearLayout
-                android:id="@+id/chatLinearLayout"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical">
+            <Button
+                android:id="@+id/watchVideo"
+                style="?attr/elevatedButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerHorizontal="true"
+                android:layout_marginTop="3dp"
+                android:text="@string/watch_video"
+                android:textAllCaps="true"
+                android:visibility="gone" />
 
-                <FrameLayout
-                    android:id="@+id/chatFragmentContainer"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1" />
-
-                <Button
-                    android:id="@+id/watchVideo"
-                    style="?attr/elevatedButtonStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:layout_marginTop="3dp"
-                    android:text="@string/watch_video"
-                    android:textAllCaps="true"
-                    android:visibility="gone" />
-            </LinearLayout>
-
-            <View
-                android:id="@+id/chatTouchView"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
-
-        </com.github.andreyasadchy.xtra.ui.view.ChatLayout>
+        </com.github.andreyasadchy.xtra.ui.view.SecondaryLayout>
 
     </FrameLayout>
 </LinearLayout>

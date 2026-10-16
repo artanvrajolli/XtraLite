@@ -140,17 +140,10 @@
         app:singleLineTitle="false" />
 
     <SwitchPreferenceCompat
-        android:defaultValue="false"
-        android:key="player_chatbartoggle"
-        android:title="@string/chat_input_toggle"
-        android:icon="@drawable/baseline_keyboard_black_24"
-        app:singleLineTitle="false" />
-
-    <SwitchPreferenceCompat
         android:defaultValue="true"
-        android:key="player_chattoggle"
-        android:title="@string/chat_toggle"
-        android:icon="@drawable/baseline_speaker_notes_black_24"
+        android:key="player_cast"
+        android:title="@string/cast_to_tv"
+        android:icon="@drawable/baseline_cast_black_24"
         app:singleLineTitle="false" />
 
     <SwitchPreferenceCompat
@@ -158,13 +151,6 @@
         android:key="player_fullscreen"
         android:title="@string/fullscreen"
         android:icon="@drawable/baseline_fullscreen_black_24"
-        app:singleLineTitle="false" />
-
-    <SwitchPreferenceCompat
-        android:defaultValue="true"
-        android:key="player_doubletap"
-        android:title="@string/player_doubletap"
-        app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
     <EditTextPreference

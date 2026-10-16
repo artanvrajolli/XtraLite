@@ -541,7 +541,7 @@
     <string name="external_login_message">Puedes iniciar sesión usando un navegador externo.\n\nSigue estos pasos:\n\n• Presiona \"Abrir URL\" para abrir la página de inicio de sesión.\n• Inicia sesión en tu cuenta y presiona \"Autorizar\".\n• Debería aparecer una página con un error. Copia la URL de esa página, pégala en el cuadro de abajo y presiona \"Aceptar\".</string>
     <string name="loading">Cargando…</string>
     <string name="copy_code">Copiar código</string>
-    <string name="external_tv_login_message">Para acceder a todas las funciones, necesitas iniciar sesión como un dispositivo Android TV.\n\nSigue estos pasos:\n• Copia el código que se muestra en la pantalla.\n• Presiona el botón \"Abrir URL\".\n• Introduce el código y presiona \"Activar\".\n• Presiona \"Autorizar\".\n• Regresa a Xtra y presiona \"Siguiente\".</string>
+    <string name="external_tv_login_message">Para acceder a todas las funciones, necesitas iniciar sesión como un dispositivo Android TV.\n\nSigue estos pasos:\n• Copia el código que se muestra en la pantalla.\n• Presiona el botón \"Abrir URL\".\n• Introduce el código y presiona \"Activar\".\n• Presiona \"Autorizar\".\n• Regresa a XtraLite y presiona \"Siguiente\".</string>
     <string name="activate_notifications_when_following">Activar notificaciones al seguir</string>
     <string name="account">Cuenta</string>
     <string name="downloading_update_progress">Descargando actualización… %1$s / %2$s</string>

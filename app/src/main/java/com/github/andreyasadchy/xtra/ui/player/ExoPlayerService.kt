@@ -235,9 +235,6 @@ class ExoPlayerService : BasePlaybackService() {
                                     val audio = find { it.name?.startsWith("audio", true) == true }
                                     audio?.let { remove(it) }
                                     add(VideoQuality(VideoQuality.AUDIO_ONLY_QUALITY, audio?.resolution, audio?.frameRate, audio?.bitrate, audio?.codecs, audio?.url))
-                                    if (type == STREAM) {
-                                        add(VideoQuality(VideoQuality.CHAT_ONLY_QUALITY))
-                                    }
                                 }
                             setDefaultQuality()
                             serviceListener?.changePlayerMode()
@@ -532,6 +529,7 @@ class ExoPlayerService : BasePlaybackService() {
                                                     )
                                                     player.volume = prefs().getInt(C.PLAYER_VOLUME, 100) / 100f
                                                     player.setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
+                                                    player.skipSilenceEnabled = prefs().getBoolean(C.PLAYER_SKIP_SILENCE, false)
                                                     player.prepare()
                                                     player.playWhenReady = true
                                                     player.seekTo(playbackPosition)
@@ -844,6 +842,7 @@ class ExoPlayerService : BasePlaybackService() {
                                     )
                                     player.volume = prefs().getInt(C.PLAYER_VOLUME, 100) / 100f
                                     player.setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
+                                    player.skipSilenceEnabled = prefs().getBoolean(C.PLAYER_SKIP_SILENCE, false)
                                     player.prepare()
                                     player.playWhenReady = !restorePauseState || !paused
                                     player.seekTo(savedPosition ?: 0)
@@ -888,6 +887,7 @@ class ExoPlayerService : BasePlaybackService() {
                                     player.setMediaItem(MediaItem.fromUri(url))
                                     player.volume = prefs().getInt(C.PLAYER_VOLUME, 100) / 100f
                                     player.setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
+                                    player.skipSilenceEnabled = prefs().getBoolean(C.PLAYER_SKIP_SILENCE, false)
                                     player.prepare()
                                     player.playWhenReady = true
                                     player.seekTo(playbackPosition)
@@ -1218,6 +1218,7 @@ class ExoPlayerService : BasePlaybackService() {
                     )
                     player.volume = prefs().getInt(C.PLAYER_VOLUME, 100) / 100f
                     player.setPlaybackSpeed(1f)
+                    player.skipSilenceEnabled = false
                     player.prepare()
                     player.playWhenReady = !restorePauseState || !paused
                 }
@@ -1310,6 +1311,7 @@ class ExoPlayerService : BasePlaybackService() {
                     )
                     player.volume = prefs().getInt(C.PLAYER_VOLUME, 100) / 100f
                     player.setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
+                    player.skipSilenceEnabled = prefs().getBoolean(C.PLAYER_SKIP_SILENCE, false)
                     player.prepare()
                     player.playWhenReady = !restorePauseState || !paused
                     player.seekTo(playbackPosition)
@@ -1463,6 +1465,7 @@ class ExoPlayerService : BasePlaybackService() {
                     )
                     player.volume = prefs().getInt(C.PLAYER_VOLUME, 100) / 100f
                     player.setPlaybackSpeed(prefs().getFloat(C.PLAYER_SPEED, 1f))
+                    player.skipSilenceEnabled = prefs().getBoolean(C.PLAYER_SKIP_SILENCE, false)
                     player.prepare()
                     player.playWhenReady = !restorePauseState || !paused
                     player.seekTo(savedPosition ?: 0)
@@ -1532,9 +1535,6 @@ class ExoPlayerService : BasePlaybackService() {
                                 player.prepare()
                                 player.seekTo(position)
                             }
-                        }
-                        VideoQuality.CHAT_ONLY_QUALITY -> {
-                            player.stop()
                         }
                         else -> {
                             if (qualities?.find { it.name == VideoQuality.AUTO_QUALITY } != null) {
@@ -2055,6 +2055,7 @@ class ExoPlayerService : BasePlaybackService() {
                 )
                 player.volume = prefs().getInt(C.PLAYER_VOLUME, 100) / 100f
                 player.setPlaybackSpeed(1f)
+                player.skipSilenceEnabled = false
                 player.prepare()
                 player.playWhenReady = true
                 secondaryPlayer = player
@@ -2162,13 +2163,11 @@ class ExoPlayerService : BasePlaybackService() {
     }
 
     fun restartPlayer() {
-        if (quality?.name != VideoQuality.CHAT_ONLY_QUALITY) {
-            lifecycleScope.launch {
-                if (secondaryPlayer != null) {
-                    stopSecondaryPlayer()
-                }
-                loadStream(restart = true)
+        lifecycleScope.launch {
+            if (secondaryPlayer != null) {
+                stopSecondaryPlayer()
             }
+            loadStream(restart = true)
         }
     }
 

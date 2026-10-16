@@ -151,32 +151,6 @@
             app:layout_constraintTop_toBottomOf="@id/timeLayout"
             tools:visibility="visible" />
 
-        <CheckBox
-            android:id="@+id/downloadChat"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/download_chat"
-            android:visibility="invisible"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/storageSelectionContainer"
-            tools:visibility="visible" />
-
-        <CheckBox
-            android:id="@+id/downloadChatEmotes"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/download_chat_emotes"
-            android:visibility="invisible"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/downloadChat"
-            tools:visibility="visible" />
-
         <Button
             android:id="@+id/cancel"
             style="?attr/dialogButtonStyle"
@@ -187,7 +161,7 @@
             android:visibility="invisible"
             app:layout_constraintEnd_toStartOf="@id/guideline"
             app:layout_constraintRight_toLeftOf="@id/guideline"
-            app:layout_constraintTop_toBottomOf="@id/downloadChatEmotes"
+            app:layout_constraintTop_toBottomOf="@id/storageSelectionContainer"
             tools:visibility="visible" />
 
         <Button
@@ -200,7 +174,7 @@
             android:visibility="invisible"
             app:layout_constraintStart_toStartOf="@id/guideline"
             app:layout_constraintLeft_toLeftOf="@id/guideline"
-            app:layout_constraintTop_toBottomOf="@id/downloadChatEmotes"
+            app:layout_constraintTop_toBottomOf="@id/storageSelectionContainer"
             tools:visibility="visible" />
 
         <com.google.android.material.progressindicator.CircularProgressIndicator

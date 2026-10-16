@@ -37,12 +37,6 @@
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 
-    <Preference
-        android:key="chat_settings"
-        android:title="@string/chat_settings"
-        app:iconSpaceReserved="false"
-        app:singleLineTitle="false" />
-
     <SwitchPreferenceCompat
         android:defaultValue="true"
         android:key="player_picture_in_picture"

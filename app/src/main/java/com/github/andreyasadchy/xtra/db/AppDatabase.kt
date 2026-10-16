@@ -6,7 +6,6 @@ import com.github.andreyasadchy.xtra.model.NotificationUser
 import com.github.andreyasadchy.xtra.model.PlaybackState
 import com.github.andreyasadchy.xtra.model.ShownNotification
 import com.github.andreyasadchy.xtra.model.VideoPosition
-import com.github.andreyasadchy.xtra.model.chat.RecentEmote
 import com.github.andreyasadchy.xtra.model.ui.Bookmark
 import com.github.andreyasadchy.xtra.model.ui.BookmarkIgnoredUser
 import com.github.andreyasadchy.xtra.model.ui.ChannelSort
@@ -18,13 +17,11 @@ import com.github.andreyasadchy.xtra.model.ui.OfflineVideo
 import com.github.andreyasadchy.xtra.model.ui.RecentSearch
 import com.github.andreyasadchy.xtra.model.ui.SavedFilter
 import com.github.andreyasadchy.xtra.model.ui.StreamProxy
-import com.github.andreyasadchy.xtra.model.ui.TranslatedChannel
 import com.github.andreyasadchy.xtra.model.ui.VideoSwap
 
 @Database(
     entities = [
         OfflineVideo::class,
-        RecentEmote::class,
         VideoPosition::class,
         LocalChannelFollow::class,
         LocalGameFollow::class,
@@ -34,7 +31,6 @@ import com.github.andreyasadchy.xtra.model.ui.VideoSwap
         GameSort::class,
         ShownNotification::class,
         NotificationUser::class,
-        TranslatedChannel::class,
         SavedFilter::class,
         RecentSearch::class,
         PlaybackState::class,
@@ -42,13 +38,12 @@ import com.github.andreyasadchy.xtra.model.ui.VideoSwap
         StreamProxy::class,
         VideoSwap::class,
     ],
-    version = 40,
+    version = 41,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun offlineVideos(): OfflineVideosDao
-    abstract fun recentEmotes(): RecentEmotesDao
     abstract fun videoPositions(): VideoPositionsDao
     abstract fun localChannelFollows(): LocalChannelFollowsDao
     abstract fun localGameFollows(): LocalGameFollowsDao
@@ -58,7 +53,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun gameSort(): GameSortDao
     abstract fun shownNotifications(): ShownNotificationsDao
     abstract fun notificationUsers(): NotificationUsersDao
-    abstract fun translatedChannels(): TranslatedChannelsDao
     abstract fun savedFilters(): SavedFiltersDao
     abstract fun recentSearches(): RecentSearchesDao
     abstract fun playbackStates(): PlaybackStatesDao

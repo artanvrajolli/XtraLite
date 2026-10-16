@@ -34,7 +34,6 @@ import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.prefs
-import kotlin.math.min
 
 class DownloadsAdapter(
     private val fragment: Fragment,
@@ -42,7 +41,6 @@ class DownloadsAdapter(
     private val resumeDownload: (OfflineVideo) -> Unit,
     private val convertVideo: (OfflineVideo) -> Unit,
     private val moveVideo: (OfflineVideo) -> Unit,
-    private val updateChatUrl: (OfflineVideo) -> Unit,
     private val shareVideo: (OfflineVideo) -> Unit,
     private val deleteVideo: (OfflineVideo) -> Unit,
 ) : PagingDataAdapter<OfflineVideo, DownloadsAdapter.PagingViewHolder>(
@@ -102,7 +100,6 @@ class DownloadsAdapter(
                             if (item.url?.endsWith(".m3u8") == true) {
                                 menu.findItem(R.id.convertVideo).isVisible = true
                             }
-                            menu.findItem(R.id.updateChatUrl).isVisible = true
                             if (item.url?.toUri()?.scheme == ContentResolver.SCHEME_CONTENT) {
                                 menu.findItem(R.id.shareVideo).isVisible = true
                             }
@@ -114,7 +111,6 @@ class DownloadsAdapter(
                             R.id.resumeDownload -> resumeDownload(item)
                             R.id.convertVideo -> convertVideo(item)
                             R.id.moveVideo -> moveVideo(item)
-                            R.id.updateChatUrl -> updateChatUrl(item)
                             R.id.shareVideo -> shareVideo(item)
                             R.id.delete -> deleteVideo(item)
                             else -> menu.close()
@@ -143,12 +139,6 @@ class DownloadsAdapter(
                     OfflineVideo.STATUS_WAITING_FOR_WIFI -> context.getString(R.string.download_blocked_wifi)
                     OfflineVideo.STATUS_WAITING_FOR_STREAM -> context.getString(R.string.download_waiting_for_stream)
                     else -> context.getString(R.string.download_pending)
-                }
-                if (item.downloadChat && itemStatus == OfflineVideo.STATUS_DOWNLOADING && progress != null && !item.live) {
-                    chatDownloadProgress.visibility = View.VISIBLE
-                    chatDownloadProgress.text = context.getString(R.string.chat_downloading_progress, min(((progress.chatProgress.toFloat() / progress.maxChatProgress) * 100f).toInt(), 100))
-                } else {
-                    chatDownloadProgress.visibility = View.GONE
                 }
                 status.visibility = View.VISIBLE
             }

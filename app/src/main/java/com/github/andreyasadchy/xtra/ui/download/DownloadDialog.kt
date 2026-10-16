@@ -437,8 +437,6 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.Listener {
                     selectDirectory.setOnClickListener {
                         viewModel.selectedQuality = binding.spinner.editText?.text.toString()
                         val location = resources.getStringArray(R.array.spinnerStorage).indexOf(storageSpinner.editText?.text.toString())
-                        val downloadChat = binding.downloadChat.isChecked
-                        val downloadChatEmotes = binding.downloadChatEmotes.isChecked
                         requireContext().prefs().edit {
                             putInt(C.DOWNLOAD_LOCATION, location)
                             when (location) {
@@ -451,8 +449,6 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.Listener {
                                     }
                                 )
                             }
-                            putBoolean(C.DOWNLOAD_CHAT, downloadChat)
-                            putBoolean(C.DOWNLOAD_CHAT_EMOTES, downloadChatEmotes)
                         }
                         directoryResultLauncher?.launch(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -481,16 +477,6 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.Listener {
                     binding.download.visibility = View.GONE
                 }
             }
-            downloadChat.apply {
-                isChecked = requireContext().prefs().getBoolean(C.DOWNLOAD_CHAT, false)
-                setOnCheckedChangeListener { _, isChecked ->
-                    downloadChatEmotes.isEnabled = isChecked
-                }
-            }
-            downloadChatEmotes.apply {
-                isChecked = requireContext().prefs().getBoolean(C.DOWNLOAD_CHAT_EMOTES, false)
-                isEnabled = downloadChat.isChecked
-            }
             cancel.setOnClickListener { dismiss() }
             download.setOnClickListener {
                 val quality = qualityMap.find { it.first == spinner.editText?.text.toString() }?.second
@@ -507,8 +493,6 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.Listener {
                     else -> null
                 }
                 if (quality?.name != null && quality.url != null && !path.isNullOrBlank()) {
-                    val downloadChat = downloadChat.isChecked
-                    val downloadChatEmotes = downloadChatEmotes.isChecked
                     when (type) {
                         STREAM -> {
                             (requireActivity() as? MainActivity)?.downloadStream(
@@ -526,8 +510,6 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.Listener {
                                 gameName = requireArguments().getString(KEY_GAME_NAME),
                                 downloadPath = path,
                                 quality = quality.name,
-                                downloadChat = downloadChat,
-                                downloadChatEmotes = downloadChatEmotes,
                                 wifiOnly = requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false)
                             )
                         }
@@ -576,8 +558,6 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.Listener {
                                         quality = quality.name,
                                         from = from,
                                         to = to,
-                                        downloadChat = downloadChat,
-                                        downloadChatEmotes = downloadChatEmotes,
                                         playlistToFile = requireContext().prefs().getBoolean(C.DOWNLOAD_PLAYLIST_TO_FILE, false),
                                         wifiOnly = requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false)
                                     )
@@ -615,8 +595,6 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.Listener {
                                 url = quality.url,
                                 downloadPath = path,
                                 quality = quality.name,
-                                downloadChat = downloadChat,
-                                downloadChatEmotes = downloadChatEmotes,
                                 wifiOnly = requireContext().prefs().getBoolean(C.DOWNLOAD_WIFI_ONLY, false)
                             )
                         }
@@ -633,8 +611,6 @@ class DownloadDialog : DialogFragment(), IntegrityDialog.Listener {
                                 }
                             )
                         }
-                        putBoolean(C.DOWNLOAD_CHAT, downloadChat)
-                        putBoolean(C.DOWNLOAD_CHAT_EMOTES, downloadChatEmotes)
                     }
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                         ActivityCompat.checkSelfPermission(requireActivity(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&

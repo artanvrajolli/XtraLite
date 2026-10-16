@@ -136,26 +136,7 @@ class LoginActivity : AppCompatActivity() {
             val apiSetting = prefs().getString(C.API_LOGIN, "0")?.toInt() ?: 0
             val helixRedirect = prefs().getString(C.HELIX_REDIRECT, "https://localhost")
             val helixScopes = listOf(
-                "channel:edit:commercial", // channels/commercial
-                "channel:manage:broadcast", // streams/markers
-                "channel:manage:moderators", // moderation/moderators
-                "channel:manage:raids", // raids
-                "channel:manage:vips", // channels/vips
-                "channel:moderate",
-                "chat:edit", // irc
-                "chat:read", // irc
-                "moderator:manage:announcements", // chat/announcements
-                "moderator:manage:banned_users", // moderation/bans
-                "moderator:manage:chat_messages", // moderation/chat
-                "moderator:manage:chat_settings", // chat/settings
-                "moderator:read:chatters", // chat/chatters
-                "moderator:read:followers", // channels/followers
-                "user:manage:chat_color", // chat/color
-                "user:manage:whispers", // whispers
-                "user:read:chat",
-                "user:read:emotes", // chat/emotes/user
                 "user:read:follows", // streams/followed, channels/followed
-                "user:write:chat", // chat/messages
             )
             val helixAuthUrl = "https://id.twitch.tv/oauth2/authorize".toUri().buildUpon().apply {
                 appendQueryParameter("response_type", "token")

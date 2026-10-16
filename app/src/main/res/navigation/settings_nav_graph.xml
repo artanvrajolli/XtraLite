@@ -26,13 +26,6 @@
         android:id="@+id/action_global_uiSettingsFragment"
         app:destination="@id/uiSettingsFragment" />
     <fragment
-        android:id="@+id/chatSettingsFragment"
-        android:name="com.github.andreyasadchy.xtra.ui.settings.SettingsActivity$ChatSettingsFragment"
-        android:label="@string/chat_settings" />
-    <action
-        android:id="@+id/action_global_chatSettingsFragment"
-        app:destination="@id/chatSettingsFragment" />
-    <fragment
         android:id="@+id/playerSettingsFragment"
         android:name="com.github.andreyasadchy.xtra.ui.settings.SettingsActivity$PlayerSettingsFragment"
         android:label="@string/player_settings" />

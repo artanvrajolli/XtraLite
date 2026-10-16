@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Xtra"
+rootProject.name = "XtraLite"
 include(":app")

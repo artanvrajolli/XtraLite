@@ -4,7 +4,6 @@ import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
-import android.util.JsonReader
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
@@ -57,30 +56,6 @@ class DownloadsViewModel(
     }
 
     fun finishDownload(video: OfflineVideo) {
-        video.chatUrl?.let { url ->
-            val isShared = url.toUri().scheme == ContentResolver.SCHEME_CONTENT
-            if (isShared) {
-                applicationContext.contentResolver.openFileDescriptor(url.toUri(), "rw")!!.use {
-                    FileOutputStream(it.fileDescriptor).use { output ->
-                        output.channel.truncate(video.chatBytes)
-                    }
-                }
-            } else {
-                FileOutputStream(url).use { output ->
-                    output.channel.truncate(video.chatBytes)
-                }
-            }
-            if (isShared) {
-                applicationContext.contentResolver.openOutputStream(url.toUri(), "wa")!!.bufferedWriter()
-            } else {
-                FileOutputStream(url, true).bufferedWriter()
-            }.use { writer ->
-                if (video.liveCommentsArrayStarted) {
-                    writer.write("]")
-                }
-                writer.write("}")
-            }
-        }
         viewModelScope.launch(Dispatchers.IO) {
             offlineVideosRepository.update(video.apply {
                 status = OfflineVideo.STATUS_DOWNLOADED
@@ -349,20 +324,6 @@ class DownloadsViewModel(
                                     progress += 1
                                 })
                             }
-                            val oldChatFile = video.chatUrl?.let { uri -> File(uri).takeIf { it.exists() } }
-                            val newChatFileUri = oldChatFile?.let { newDirectoryUri.toString() + (if (!newDirectoryUri.toString().endsWith("%3A")) "%2F" else "") + it.name }
-                            if (newChatFileUri != null) {
-                                try {
-                                    applicationContext.contentResolver.openOutputStream(newChatFileUri.toUri())!!
-                                } catch (e: IllegalArgumentException) {
-                                    DocumentsContract.createDocument(applicationContext.contentResolver, newDirectoryUri, "", oldChatFile.name)
-                                    applicationContext.contentResolver.openOutputStream(newChatFileUri.toUri())!!
-                                }.use { outputStream ->
-                                    oldChatFile.inputStream().use { inputStream ->
-                                        inputStream.copyTo(outputStream)
-                                    }
-                                }
-                            }
                             offlineVideosRepository.update(video.apply {
                                 thumbnail.let {
                                     if (it == null || it == url || !File(it).exists()) {
@@ -374,14 +335,12 @@ class DownloadsViewModel(
                                     }
                                 }
                                 url = newPlaylistFileUri
-                                chatUrl = newChatFileUri
                             })
                             if (playlists?.isNotEmpty() == true) {
                                 oldPlaylistFile.delete()
                             } else {
                                 oldVideoDirectory.deleteRecursively()
                             }
-                            oldChatFile?.delete()
                         }
                     }
                 } else {
@@ -400,20 +359,6 @@ class DownloadsViewModel(
                                 inputStream.copyTo(outputStream)
                             }
                         }
-                        val oldChatFile = video.chatUrl?.let { uri -> File(uri).takeIf { it.exists() } }
-                        val newChatFileUri = oldChatFile?.let { newDirectoryUri.toString() + (if (!newDirectoryUri.toString().endsWith("%3A")) "%2F" else "") + it.name }
-                        if (newChatFileUri != null) {
-                            try {
-                                applicationContext.contentResolver.openOutputStream(newChatFileUri.toUri())!!
-                            } catch (e: IllegalArgumentException) {
-                                DocumentsContract.createDocument(applicationContext.contentResolver, newDirectoryUri, "", oldChatFile.name)
-                                applicationContext.contentResolver.openOutputStream(newChatFileUri.toUri())!!
-                            }.use { outputStream ->
-                                oldChatFile.inputStream().use { inputStream ->
-                                    inputStream.copyTo(outputStream)
-                                }
-                            }
-                        }
                         offlineVideosRepository.update(video.apply {
                             thumbnail.let {
                                 if (it == null || it == url || !File(it).exists()) {
@@ -421,10 +366,8 @@ class DownloadsViewModel(
                                 }
                             }
                             url = newFileUri
-                            chatUrl = newChatFileUri
                         })
                         oldFile.delete()
-                        oldChatFile?.delete()
                     }
                 }
             }.invokeOnCompletion {
@@ -520,16 +463,6 @@ class DownloadsViewModel(
                             progress += 1
                         })
                     }
-                    val oldChatUri = video.chatUrl
-                    val oldChatFileName = oldChatUri?.substringAfterLast("%2F")?.substringAfterLast("/")?.substringAfterLast("%3A")?.let { Uri.decode(it) }
-                    val newChatFileUri = oldChatFileName?.let { path + File.separator + it }
-                    if (oldChatUri != null && newChatFileUri != null) {
-                        FileOutputStream(newChatFileUri).use { outputStream ->
-                            applicationContext.contentResolver.openInputStream(oldChatUri.toUri())!!.use { inputStream ->
-                                inputStream.copyTo(outputStream)
-                            }
-                        }
-                    }
                     offlineVideosRepository.update(video.apply {
                         thumbnail.let {
                             if (it == null || it == url || !File(it).exists()) {
@@ -539,7 +472,6 @@ class DownloadsViewModel(
                             }
                         }
                         url = newPlaylistFileUri
-                        chatUrl = newChatFileUri
                     })
                     if (playlists.isNotEmpty()) {
                         try {
@@ -554,29 +486,12 @@ class DownloadsViewModel(
 
                         }
                     }
-                    if (oldChatUri != null) {
-                        try {
-                            DocumentsContract.deleteDocument(applicationContext.contentResolver, oldChatUri.toUri())
-                        } catch (e: Exception) {
-
-                        }
-                    }
                 } else {
                     val oldFileName = Uri.decode(videoUrl.substringAfterLast("%2F").substringAfterLast("/").substringAfterLast("%3A"))
                     val newFileUri = path + File.separator + oldFileName
                     FileOutputStream(newFileUri).use { outputStream ->
                         applicationContext.contentResolver.openInputStream(videoUrl.toUri())!!.use { inputStream ->
                             inputStream.copyTo(outputStream)
-                        }
-                    }
-                    val oldChatUri = video.chatUrl
-                    val oldChatFileName = oldChatUri?.substringAfterLast("%2F")?.substringAfterLast("/")?.substringAfterLast("%3A")?.let { Uri.decode(it) }
-                    val newChatFileUri = oldChatFileName?.let { path + File.separator + it }
-                    if (oldChatUri != null && newChatFileUri != null) {
-                        FileOutputStream(newChatFileUri).use { outputStream ->
-                            applicationContext.contentResolver.openInputStream(oldChatUri.toUri())!!.use { inputStream ->
-                                inputStream.copyTo(outputStream)
-                            }
                         }
                     }
                     offlineVideosRepository.update(video.apply {
@@ -586,19 +501,11 @@ class DownloadsViewModel(
                             }
                         }
                         url = newFileUri
-                        chatUrl = newChatFileUri
                     })
                     try {
                         DocumentsContract.deleteDocument(applicationContext.contentResolver, videoUrl.toUri())
                     } catch (e: Exception) {
 
-                    }
-                    if (oldChatUri != null) {
-                        try {
-                            DocumentsContract.deleteDocument(applicationContext.contentResolver, oldChatUri.toUri())
-                        } catch (e: Exception) {
-
-                        }
                     }
                 }
             }.invokeOnCompletion {
@@ -608,67 +515,6 @@ class DownloadsViewModel(
                         status = OfflineVideo.STATUS_DOWNLOADED
                     })
                 }
-            }
-        }
-    }
-
-    fun updateChatUrl(newUri: Uri, video: OfflineVideo) {
-        if (!videosInUse.contains(video)) {
-            viewModelScope.launch(Dispatchers.IO) {
-                var id: String? = null
-                var title: String? = null
-                var uploadDate: Long? = null
-                var channelId: String? = null
-                var channelLogin: String? = null
-                var channelName: String? = null
-                var gameId: String? = null
-                var gameSlug: String? = null
-                var gameName: String? = null
-                try {
-                    applicationContext.contentResolver.openInputStream(newUri)?.bufferedReader()?.use { fileReader ->
-                        JsonReader(fileReader).use { reader ->
-                            reader.beginObject()
-                            while (reader.hasNext()) {
-                                when (reader.nextName()) {
-                                    "video" -> {
-                                        reader.beginObject()
-                                        while (reader.hasNext()) {
-                                            when (reader.nextName()) {
-                                                "id" -> id = reader.nextString()
-                                                "title" -> title = reader.nextString()
-                                                "uploadDate" -> uploadDate = reader.nextLong()
-                                                "channelId" -> channelId = reader.nextString()
-                                                "channelLogin" -> channelLogin = reader.nextString()
-                                                "channelName" -> channelName = reader.nextString()
-                                                "gameId" -> gameId = reader.nextString()
-                                                "gameSlug" -> gameSlug = reader.nextString()
-                                                "gameName" -> gameName = reader.nextString()
-                                                else -> reader.skipValue()
-                                            }
-                                        }
-                                        reader.endObject()
-                                    }
-                                    else -> reader.skipValue()
-                                }
-                            }
-                            reader.endObject()
-                        }
-                    }
-                } catch (e: Exception) {
-
-                }
-                offlineVideosRepository.update(video.apply {
-                    if (!title.isNullOrBlank()) this.name = title
-                    if (!channelId.isNullOrBlank()) this.channelId = channelId
-                    if (!channelLogin.isNullOrBlank()) this.channelLogin = channelLogin
-                    if (!channelName.isNullOrBlank()) this.channelName = channelName
-                    if (!gameId.isNullOrBlank()) this.gameId = gameId
-                    if (!gameSlug.isNullOrBlank()) this.gameSlug = gameSlug
-                    if (!gameName.isNullOrBlank()) this.gameName = gameName
-                    if (uploadDate != null) this.uploadDate = uploadDate
-                    if (!id.isNullOrBlank()) this.videoId = id
-                    chatUrl = newUri.toString()
-                })
             }
         }
     }
@@ -744,6 +590,7 @@ class DownloadsViewModel(
 
                             }
                         }
+                        // remove chat logs left over from downloads made before chat was removed
                         video.chatUrl?.let {
                             try {
                                 DocumentsContract.deleteDocument(applicationContext.contentResolver, it.toUri())

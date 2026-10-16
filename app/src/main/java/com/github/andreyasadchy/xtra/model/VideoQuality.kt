@@ -15,6 +15,5 @@ class VideoQuality(
         const val AUTO_QUALITY = "auto"
         const val SOURCE_QUALITY = "source"
         const val AUDIO_ONLY_QUALITY = "audio_only"
-        const val CHAT_ONLY_QUALITY = "chat_only"
     }
 }

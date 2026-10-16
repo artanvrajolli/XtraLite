@@ -186,7 +186,6 @@ class SettingsViewModel(
                                                     maxProgress = 100,
                                                     status = OfflineVideo.STATUS_DOWNLOADED,
                                                     videoId = if (!id.isNullOrBlank()) id else null,
-                                                    chatUrl = chatFile
                                                 )
                                             )
                                         }
@@ -256,7 +255,6 @@ class SettingsViewModel(
                                             maxProgress = 100,
                                             status = OfflineVideo.STATUS_DOWNLOADED,
                                             videoId = if (!id.isNullOrBlank()) id else null,
-                                            chatUrl = chatFile
                                         )
                                     )
                                 }

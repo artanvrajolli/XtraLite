@@ -166,14 +166,12 @@ abstract class BasePlaybackService : LifecycleService() {
                 when (savedQuality) {
                     VideoQuality.AUTO_QUALITY -> qualities?.find { it.name == VideoQuality.AUTO_QUALITY }
                     VideoQuality.AUDIO_ONLY_QUALITY -> qualities?.find { it.name == VideoQuality.AUDIO_ONLY_QUALITY }
-                    VideoQuality.CHAT_ONLY_QUALITY -> qualities?.find { it.name == VideoQuality.CHAT_ONLY_QUALITY }
                     else -> findQuality(savedQuality)
                 }
             }
             VideoQuality.AUTO_QUALITY -> qualities?.find { it.name == VideoQuality.AUTO_QUALITY }
             "Source" -> qualities?.find { it.name != VideoQuality.AUTO_QUALITY }
             VideoQuality.AUDIO_ONLY_QUALITY -> qualities?.find { it.name == VideoQuality.AUDIO_ONLY_QUALITY }
-            VideoQuality.CHAT_ONLY_QUALITY -> qualities?.find { it.name == VideoQuality.CHAT_ONLY_QUALITY }
             else -> findQuality(defaultQuality)
         } ?: qualities?.firstOrNull()
     }
@@ -182,7 +180,7 @@ abstract class BasePlaybackService : LifecycleService() {
         val targetQuality = targetQualityString?.split("p")
         return targetQuality?.getOrNull(0)?.takeWhile { it.isDigit() }?.toIntOrNull()?.let { targetResolution ->
             val targetFps = targetQuality.getOrNull(1)?.takeWhile { it.isDigit() }?.toIntOrNull() ?: 30
-            val last = qualities?.lastOrNull { it.name != VideoQuality.AUDIO_ONLY_QUALITY && it.name != VideoQuality.CHAT_ONLY_QUALITY }
+            val last = qualities?.lastOrNull { it.name != VideoQuality.AUDIO_ONLY_QUALITY }
             qualities?.find { quality ->
                 quality.resolution != null
                         && ((targetResolution == quality.resolution

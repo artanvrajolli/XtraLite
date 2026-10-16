@@ -33,10 +33,7 @@
     *;
 }
 
-# AGP 9
--keep class com.google.mlkit.nl.languageid.** { *; }
--keep class com.google.mlkit.nl.translate.NaturalLanguageTranslateRegistrar { *; }
--keep class com.google.mlkit.common.internal.CommonComponentRegistrar { *; }
+-keep class com.github.andreyasadchy.xtra.util.CastOptionsProvider { *; }
 
 -keep class androidx.work.impl.WorkDatabase_Impl {
     <init>();

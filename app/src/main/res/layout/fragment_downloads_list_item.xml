@@ -176,20 +176,6 @@
             android:textColor="@android:color/white"
             android:textSize="30sp" />
 
-        <TextView
-            android:id="@+id/chatDownloadProgress"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:gravity="center"
-            android:shadowColor="#000000"
-            android:shadowRadius="4"
-            android:textAllCaps="true"
-            android:textAppearance="?attr/textAppearanceTitleLarge"
-            android:textColor="@android:color/white"
-            android:textSize="30sp"
-            android:visibility="gone" />
-
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

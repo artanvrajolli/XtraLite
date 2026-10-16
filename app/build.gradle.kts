@@ -24,7 +24,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.github.andreyasadchy.xtra"
+        applicationId = "com.github.artanvrajolli.xtralite"
         minSdk = 24
         targetSdk = 37
         versionCode = 121
@@ -54,20 +54,10 @@ android {
     lint {
         disable += "ContentDescription"
     }
-    packaging.jniLibs.excludes.addAll(listOf(
-        "lib/x86/libtranslate_jni.so",
-        "lib/x86/liblanguage_id_l2c_jni.so",
-        "lib/x86_64/libtranslate_jni.so",
-        "lib/x86_64/liblanguage_id_l2c_jni.so",
-        "lib/armeabi-v7a/libtranslate_jni.so",
-        "lib/armeabi-v7a/liblanguage_id_l2c_jni.so",
-    ))
 }
 
 dependencies {
     compileOnly("com.google.j2objc:j2objc-annotations:3.0.0") // OkHttpDataSource SettableFuture
-    implementation("com.google.mlkit:language-id:17.0.6")
-    implementation("com.google.mlkit:translate:17.0.3")
 
     implementation(libs.material)
     implementation(libs.markwon.core)
@@ -105,6 +95,8 @@ dependencies {
     implementation(libs.media3.exoplayer.hls)
     implementation(libs.media3.ui)
     implementation(libs.media3.session)
+    implementation(libs.mediarouter)
+    implementation(libs.play.services.cast)
 
     implementation(libs.coil)
     implementation(libs.coil.gif)

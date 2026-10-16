@@ -20,7 +20,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
-import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.TrackSelectionParameters
@@ -125,17 +124,6 @@ class ExoPlayerFragment : PlayerFragment() {
                 binding.playerControls.progressBar.setDuration(duration)
                 binding.playerControls.duration.text = DateUtils.formatElapsedTime(duration / 1000)
                 updateProgress()
-                if (reason == Player.DISCONTINUITY_REASON_SEEK) {
-                    if (chatFragment?.context != null) { // TODO
-                        chatFragment?.updatePosition(newPosition.positionMs)
-                    }
-                }
-            }
-
-            override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
-                if (chatFragment?.context != null) { // TODO
-                    chatFragment?.updateSpeed(playbackParameters.speed)
-                }
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -147,9 +135,6 @@ class ExoPlayerFragment : PlayerFragment() {
 
             override fun onTracksChanged(tracks: Tracks) {
                 setSubtitlesButton()
-                if (!tracks.isEmpty) {
-                    chatFragment?.startReplayChatLoad()
-                }
             }
 
             override fun onTimelineChanged(timeline: Timeline, reason: Int) {
@@ -176,7 +161,6 @@ class ExoPlayerFragment : PlayerFragment() {
                             start()
                         }
                     } else {
-                        chatFragment?.startReplayChatLoad()
                         if (playbackService?.restoreQuality == true) {
                             playbackService?.restoreQuality = false
                             changeQuality(playbackService?.previousQuality)
@@ -317,7 +301,6 @@ class ExoPlayerFragment : PlayerFragment() {
                                 start()
                             }
                         } else {
-                            chatFragment?.startReplayChatLoad()
                             if (playbackService?.restoreQuality == true) {
                                 playbackService?.restoreQuality = false
                                 changeQuality(playbackService?.previousQuality)
@@ -356,6 +339,15 @@ class ExoPlayerFragment : PlayerFragment() {
         playbackService?.togglePause()
     }
 
+    override fun pausePlayback() {
+        playbackService?.pause()
+    }
+
+    override fun getCastUrl(): String? {
+        return playbackService?.player?.currentMediaItem?.localConfiguration?.uri
+            ?.takeIf { it.scheme == "http" || it.scheme == "https" }?.toString()
+    }
+
     override fun rewind() {
         playbackService?.seekBack()
     }
@@ -374,6 +366,12 @@ class ExoPlayerFragment : PlayerFragment() {
 
     override fun setPlaybackSpeed(speed: Float) {
         playbackService?.player?.setPlaybackSpeed(speed)
+    }
+
+    override fun getSkipSilence() = playbackService?.player?.skipSilenceEnabled
+
+    override fun setSkipSilence(enabled: Boolean) {
+        playbackService?.player?.skipSilenceEnabled = enabled
     }
 
     override fun changeVolume(volume: Float) {

@@ -71,10 +71,6 @@ import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.tokenPrefs
 import com.google.android.material.appbar.AppBarLayout
-import com.google.mlkit.common.model.DownloadConditions
-import com.google.mlkit.common.model.RemoteModelManager
-import com.google.mlkit.nl.translate.TranslateLanguage
-import com.google.mlkit.nl.translate.TranslateRemoteModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -374,11 +370,6 @@ class SettingsActivity : AppCompatActivity() {
                 findNavController().navigate(SettingsNavGraphDirections.actionGlobalUiSettingsFragment())
                 true
             }
-            findPreference<Preference>("chat_settings")?.setOnPreferenceClickListener {
-                requireActivity().findViewById<AppBarLayout>(R.id.appBar)?.setExpanded(true)
-                findNavController().navigate(SettingsNavGraphDirections.actionGlobalChatSettingsFragment())
-                true
-            }
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
                 findPreference<SwitchPreferenceCompat>(C.PLAYER_PICTURE_IN_PICTURE)?.isVisible = false
             }
@@ -444,7 +435,7 @@ class SettingsActivity : AppCompatActivity() {
             findPreference<Preference>("check_updates")?.setOnPreferenceClickListener {
                 viewModel.checkUpdates(
                     requireContext().prefs().getString(C.NETWORK_LIBRARY, C.OKHTTP),
-                    requireContext().prefs().getString(C.UPDATE_URL, null) ?: "https://api.github.com/repos/crackededed/xtra/releases/tags/latest",
+                    requireContext().prefs().getString(C.UPDATE_URL, null) ?: "https://api.github.com/repos/artanvrajolli/XtraLite/releases/tags/latest",
                     requireContext().tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0)
                 )
                 true
@@ -801,7 +792,6 @@ class SettingsActivity : AppCompatActivity() {
                             "0" -> getString(R.string.suggestions)
                             "1" -> getString(R.string.videos)
                             "2" -> getString(R.string.clips)
-                            "3" -> getString(R.string.chat)
                             "4" -> getString(R.string.about)
                             else -> getString(R.string.videos)
                         },
@@ -886,104 +876,6 @@ class SettingsActivity : AppCompatActivity() {
                     .setNegativeButton(getString(R.string.no), null)
                     .show()
                 true
-            }
-        }
-
-        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-            super.onViewCreated(view, savedInstanceState)
-            ViewCompat.setOnApplyWindowInsetsListener(view) { _, windowInsets ->
-                val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-                listView.updatePadding(bottom = insets.bottom)
-                WindowInsetsCompat.CONSUMED
-            }
-            requireActivity().findViewById<AppBarLayout>(R.id.appBar)?.let { appBar ->
-                if (requireContext().prefs().getBoolean(C.UI_THEME_APPBAR_LIFT, true)) {
-                    listView.let {
-                        appBar.setLiftOnScrollTargetView(it)
-                        it.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                                super.onScrolled(recyclerView, dx, dy)
-                                appBar.isLifted = recyclerView.canScrollVertically(-1)
-                            }
-                        })
-                        it.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-                            appBar.isLifted = it.canScrollVertically(-1)
-                        }
-                    }
-                } else {
-                    appBar.setLiftable(false)
-                    appBar.background = null
-                }
-            }
-            (requireActivity() as? SettingsActivity)?.getSelectedSearchItem()?.let { scrollToPreference(it) }
-        }
-    }
-
-    class ChatSettingsFragment : MaterialPreferenceFragment() {
-        override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-            setPreferencesFromResource(R.xml.chat_preferences, rootKey)
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-                findPreference<ListPreference>(C.CHAT_IMAGE_LIBRARY)?.apply {
-                    setEntries(R.array.imageLibraryEntriesNoWebp)
-                    setEntryValues(R.array.imageLibraryValuesNoWebp)
-                }
-            }
-            findPreference<SeekBarPreference>("chatWidth")?.apply {
-                setOnPreferenceChangeListener { _, newValue ->
-                    (requireActivity() as? SettingsActivity)?.setResult()
-                    val width = resources.displayMetrics.widthPixels
-                    val height = resources.displayMetrics.heightPixels
-                    val chatWidth = ((if (height > width) height else width) * (newValue as Int / 100f)).toInt()
-                    requireContext().prefs().edit { putInt(C.LANDSCAPE_CHAT_WIDTH, chatWidth) }
-                    true
-                }
-            }
-            if (Build.SUPPORTED_64_BIT_ABIS.firstOrNull() == "arm64-v8a") {
-                val languages = TranslateLanguage.getAllLanguages()
-                val names = languages.map { Locale.forLanguageTag(it).displayLanguage }.toTypedArray()
-                findPreference<Preference>("downloaded_languages")?.setOnPreferenceClickListener {
-                    val modelManager = RemoteModelManager.getInstance()
-                    modelManager.getDownloadedModels(TranslateRemoteModel::class.java)
-                        .addOnSuccessListener { models ->
-                            val downloaded = models.map { it.language }
-                            val checked = languages.map { downloaded.contains(it) }.toBooleanArray()
-                            val selectedItems = downloaded.toMutableList()
-                            requireActivity().getAlertDialogBuilder()
-                                .setMultiChoiceItems(names, checked) { _, which, isChecked ->
-                                    languages.getOrNull(which)?.let { language ->
-                                        if (isChecked) {
-                                            if (!selectedItems.contains(language)) {
-                                                selectedItems.add(language)
-                                            }
-                                        } else {
-                                            selectedItems.remove(language)
-                                        }
-                                    }
-                                }
-                                .setPositiveButton(android.R.string.ok) { _, _ ->
-                                    downloaded.filter { !selectedItems.contains(it) }.forEach {
-                                        modelManager.deleteDownloadedModel(TranslateRemoteModel.Builder(it).build())
-                                    }
-                                    selectedItems.filter { !downloaded.contains(it) }.forEach {
-                                        modelManager.download(
-                                            TranslateRemoteModel.Builder(it).build(),
-                                            DownloadConditions.Builder().build()
-                                        )
-                                    }
-                                }
-                                .setNegativeButton(getString(android.R.string.cancel), null)
-                                .show()
-                        }
-                    true
-                }
-                findPreference<ListPreference>("chat_translate_target")?.apply {
-                    entries = names
-                    entryValues = languages.toTypedArray()
-                }
-            } else {
-                findPreference<SwitchPreferenceCompat>("chat_translate")?.isVisible = false
-                findPreference<Preference>("downloaded_languages")?.isVisible = false
-                findPreference<ListPreference>("chat_translate_target")?.isVisible = false
             }
         }
 
@@ -1583,7 +1475,6 @@ class SettingsActivity : AppCompatActivity() {
                 listOf(
                     Triple(R.xml.api_token_preferences, SettingsNavGraphDirections.actionGlobalApiTokenSettingsFragment(), getString(R.string.api_token_settings)),
                     Triple(R.xml.buffer_preferences, SettingsNavGraphDirections.actionGlobalBufferSettingsFragment(), getString(R.string.buffer_settings)),
-                    Triple(R.xml.chat_preferences, SettingsNavGraphDirections.actionGlobalChatSettingsFragment(), getString(R.string.chat_settings)),
                     Triple(R.xml.debug_preferences, SettingsNavGraphDirections.actionGlobalDebugSettingsFragment(), getString(R.string.debug_settings)),
                     Triple(R.xml.download_preferences, SettingsNavGraphDirections.actionGlobalDownloadSettingsFragment(), getString(R.string.download_settings)),
                     Triple(R.xml.playback_preferences, SettingsNavGraphDirections.actionGlobalPlaybackSettingsFragment(), getString(R.string.playback_settings)),
