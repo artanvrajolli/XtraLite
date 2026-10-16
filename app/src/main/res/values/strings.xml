@@ -627,4 +627,6 @@
     <string name="app_icon_gamepad">Gamepad</string>
     <string name="app_icon_planet">Planet</string>
     <string name="cast_switch_tv">Switch TV</string>
+    <string name="cast_sending">Sending to TV…</string>
+    <string name="cast_download_unavailable">Downloaded videos can\'t be cast. Stop casting to play it on this device.</string>
 </resources>

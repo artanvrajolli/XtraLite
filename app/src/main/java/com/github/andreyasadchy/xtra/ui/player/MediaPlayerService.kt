@@ -528,37 +528,7 @@ class MediaPlayerService : BasePlaybackService() {
             if (restart || qualities.isNullOrEmpty()) {
                 val proxyUrl = if (useCustomProxy) {
                     customProxyList?.getOrNull(currentCustomProxy)?.let { proxy ->
-                        proxy.url?.let { proxyUrl ->
-                            (proxyUrl.toUri().takeIf { it.host != null } ?: "https://$proxyUrl".toUri()).let { uri ->
-                                if (proxy.addQueryParams) {
-                                    val source = uri.getQueryParameter("allow_source") == null
-                                    val audio = uri.getQueryParameter("allow_audio_only") == null
-                                    val lowLatency = uri.getQueryParameter("fast_bread") == null
-                                    val unavailable = uri.getQueryParameter("include_unavailable") == null
-                                    val supportedCodecs = prefs().getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264")
-                                    val codecs = !supportedCodecs.isNullOrBlank() && uri.getQueryParameter("supported_codecs") == null
-                                    if (source || audio || lowLatency || unavailable || codecs) {
-                                        uri.buildUpon().apply {
-                                            if (source) {
-                                                appendQueryParameter("allow_source", "true")
-                                            }
-                                            if (audio) {
-                                                appendQueryParameter("allow_audio_only", "true")
-                                            }
-                                            if (lowLatency) {
-                                                appendQueryParameter("fast_bread", "true")
-                                            }
-                                            if (unavailable) {
-                                                appendQueryParameter("include_unavailable", "true")
-                                            }
-                                            if (codecs) {
-                                                appendQueryParameter("supported_codecs", supportedCodecs)
-                                            }
-                                        }.build()
-                                    } else uri
-                                } else uri
-                            }.toString().replace("\$channel", channelLogin)
-                        }
+                        TwitchApiHelper.getCustomProxyUrl(proxy, channelLogin, prefs().getString(C.TOKEN_SUPPORTED_CODECS, "av1,h265,h264"))
                     }
                 } else null
                 if (proxyUrl != null) {

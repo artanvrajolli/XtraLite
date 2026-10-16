@@ -7,7 +7,9 @@ import android.icu.number.Precision
 import android.icu.text.CompactDecimalFormat
 import android.os.Build
 import android.text.format.DateUtils
+import androidx.core.net.toUri
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.model.ui.CustomProxy
 import org.json.JSONObject
 import java.math.RoundingMode
 import java.text.NumberFormat
@@ -51,6 +53,40 @@ object TwitchApiHelper {
         "https://d2vi6trrdongqn.cloudfront.net",
         "https://d1ndex63qxojbr.cloudfront.net",
     )
+
+    /** Playlist URL of a custom (ad-blocking) stream proxy for [channelLogin]. */
+    fun getCustomProxyUrl(proxy: CustomProxy, channelLogin: String, supportedCodecs: String?): String? {
+        return proxy.url?.let { proxyUrl ->
+            (proxyUrl.toUri().takeIf { it.host != null } ?: "https://$proxyUrl".toUri()).let { uri ->
+                if (proxy.addQueryParams) {
+                    val source = uri.getQueryParameter("allow_source") == null
+                    val audio = uri.getQueryParameter("allow_audio_only") == null
+                    val lowLatency = uri.getQueryParameter("fast_bread") == null
+                    val unavailable = uri.getQueryParameter("include_unavailable") == null
+                    val codecs = !supportedCodecs.isNullOrBlank() && uri.getQueryParameter("supported_codecs") == null
+                    if (source || audio || lowLatency || unavailable || codecs) {
+                        uri.buildUpon().apply {
+                            if (source) {
+                                appendQueryParameter("allow_source", "true")
+                            }
+                            if (audio) {
+                                appendQueryParameter("allow_audio_only", "true")
+                            }
+                            if (lowLatency) {
+                                appendQueryParameter("fast_bread", "true")
+                            }
+                            if (unavailable) {
+                                appendQueryParameter("include_unavailable", "true")
+                            }
+                            if (codecs) {
+                                appendQueryParameter("supported_codecs", supportedCodecs)
+                            }
+                        }.build()
+                    } else uri
+                } else uri
+            }.toString().replace("\$channel", channelLogin)
+        }
+    }
 
     fun getStreamThumbnail(url: String?): String? {
         return when {

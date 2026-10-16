@@ -64,6 +64,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.github.andreyasadchy.xtra.R
+import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.databinding.ActivityMainBinding
 import com.github.andreyasadchy.xtra.databinding.DialogUpdateDownloadBinding
 import com.github.andreyasadchy.xtra.model.PlaybackState
@@ -643,6 +644,18 @@ class MainActivity : AppCompatActivity() {
         restorePlayerFragment()
     }
 
+    private fun castMedia(resolve: suspend () -> CastManager.CastMedia?) {
+        Toast.makeText(this, R.string.cast_sending, Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val media = resolve()
+            if (media != null) {
+                CastManager.load(this@MainActivity, media)
+            } else {
+                Toast.makeText(this@MainActivity, R.string.cast_video_unavailable, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     private fun setUpCast() {
         // casting is optional: never let a Cast SDK problem stop the app from starting
         try {
@@ -928,6 +941,16 @@ class MainActivity : AppCompatActivity() {
 //Navigation listeners
 
     fun startStream(stream: Stream) {
+        if (CastManager.isConnected()) {
+            // while casting, send it to the TV instead of playing it here
+            val channelLogin = stream.channelLogin ?: return
+            castMedia {
+                CastManager.getStreamUrl(this, channelLogin)?.let {
+                    CastManager.CastMedia(it, true, stream.title, stream.channelName, stream.thumbnail)
+                }
+            }
+            return
+        }
         (playerFragment as? ExoPlayerFragment)?.close(deleteStates = false)
         viewModel.savePlaybackState(PlaybackState(
             type = BasePlaybackService.STREAM,
@@ -952,6 +975,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun startVideo(video: Video, offset: Long?, ignoreSavedPosition: Boolean = false, qualities: String? = null) {
+        if (CastManager.isConnected() && !video.id.isNullOrBlank()) {
+            val videoId = video.id
+            castMedia {
+                CastManager.getVideoUrl(this, videoId)?.let {
+                    val position = offset ?: if (!ignoreSavedPosition && prefs.getBoolean(C.PLAYER_USE_VIDEO_POSITIONS, true)) {
+                        videoId.toLongOrNull()?.let { id -> (application as XtraApp).xtraModule.playerRepository.getVideoPosition(id)?.position }
+                    } else null
+                    CastManager.CastMedia(it, false, video.title, video.channelName, video.thumbnail, position)
+                }
+            }
+            return
+        }
         (playerFragment as? ExoPlayerFragment)?.close(deleteStates = false)
         viewModel.savePlaybackState(PlaybackState(
             type = BasePlaybackService.VIDEO,
@@ -985,6 +1020,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun startClip(clip: Clip) {
+        if (CastManager.isConnected() && !clip.id.isNullOrBlank()) {
+            val clipId = clip.id
+            castMedia {
+                CastManager.getClipUrl(this, clipId)?.let {
+                    CastManager.CastMedia(it, false, clip.title, clip.channelName, clip.thumbnail)
+                }
+            }
+            return
+        }
         (playerFragment as? ExoPlayerFragment)?.close(deleteStates = false)
         viewModel.savePlaybackState(PlaybackState(
             type = BasePlaybackService.CLIP,
@@ -1013,6 +1057,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun startOfflineVideo(video: OfflineVideo, offset: Long? = null) {
+        if (CastManager.isConnected()) {
+            // downloads are files on this device and can't be sent to the TV
+            Toast.makeText(this, R.string.cast_download_unavailable, Toast.LENGTH_LONG).show()
+            return
+        }
         (playerFragment as? ExoPlayerFragment)?.close(deleteStates = false)
         viewModel.savePlaybackState(PlaybackState(
             type = BasePlaybackService.OFFLINE_VIDEO,

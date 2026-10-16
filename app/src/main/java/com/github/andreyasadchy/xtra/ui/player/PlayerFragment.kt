@@ -51,13 +51,11 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.TimeBar
 import androidx.navigation.fragment.findNavController
 import com.github.andreyasadchy.xtra.R
-import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.databinding.FragmentPlayerBinding
 import com.github.andreyasadchy.xtra.model.VideoQuality
 import com.github.andreyasadchy.xtra.model.ui.Video
@@ -72,23 +70,16 @@ import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel.Companion.PlayerViewModelFactory
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.CastManager
-import com.github.andreyasadchy.xtra.util.CastProxyServer
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.tokenPrefs
-import com.google.android.gms.cast.HlsSegmentFormat
-import com.google.android.gms.cast.HlsVideoSegmentFormat
-import com.google.android.gms.cast.MediaInfo
-import com.google.android.gms.cast.MediaLoadRequestData
-import com.google.android.gms.cast.MediaMetadata
 import com.google.android.gms.cast.framework.CastButtonFactory
 import com.google.android.gms.cast.framework.CastContext
 import com.google.android.gms.cast.framework.CastSession
 import com.google.android.gms.cast.framework.SessionManagerListener
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
-import com.google.android.gms.common.images.WebImage
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.timepicker.MaterialTimePicker
@@ -1045,75 +1036,31 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
     }
 
     private fun startCasting(session: CastSession, showError: Boolean) {
-        val castContext = castContext
         val sourceUrl = when (playbackService?.type) {
             BasePlaybackService.STREAM, BasePlaybackService.VIDEO -> playbackService?.playlistUrl ?: getCastUrl()
             else -> getCastUrl()
         }
-        val remoteMediaClient = session.remoteMediaClient
-        if (sourceUrl == null || remoteMediaClient == null || castContext == null) {
+        if (sourceUrl == null || session.remoteMediaClient == null) {
             if (showError) {
                 Toast.makeText(requireContext(), R.string.cast_video_unavailable, Toast.LENGTH_SHORT).show()
             }
             return
         }
-        val isHls = sourceUrl.toUri().path?.endsWith(".mp4") != true
-        val url = if (isHls) {
-            // Twitch playlists don't allow the receiver's origin, so they are relayed through this device
-            CastProxyServer.wrap(requireContext(), (requireContext().applicationContext as XtraApp).xtraModule.okHttpClient.value, sourceUrl)
-        } else {
-            sourceUrl
-        }
-        if (url == null) {
-            if (showError) {
-                Toast.makeText(requireContext(), R.string.cast_no_local_network, Toast.LENGTH_LONG).show()
-            }
-            return
-        }
-        val isLive = playbackService?.type == BasePlaybackService.STREAM
-        val metadata = MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE).apply {
-            (playbackService?.title?.takeIf { it.isNotBlank() } ?: playbackService?.channelName)?.let {
-                putString(MediaMetadata.KEY_TITLE, it)
-            }
-            playbackService?.channelName?.let {
-                putString(MediaMetadata.KEY_SUBTITLE, it)
-            }
-            playbackService?.thumbnail?.takeIf { it.startsWith("http") }?.let {
-                val thumbnail = it.replace(Regex("%?\\{width\\}"), "1280").replace(Regex("%?\\{height\\}"), "720")
-                addImage(WebImage(thumbnail.toUri()))
-            }
-        }
-        val mediaInfo = MediaInfo.Builder(url).apply {
-            setContentUrl(url)
-            setStreamType(if (isLive) MediaInfo.STREAM_TYPE_LIVE else MediaInfo.STREAM_TYPE_BUFFERED)
-            setMetadata(metadata)
-            if (isHls) {
-                setContentType(MimeTypes.APPLICATION_M3U8)
-                // the relay only offers H.264 variants, which Twitch serves as MPEG-TS
-                setHlsSegmentFormat(HlsSegmentFormat.TS)
-                setHlsVideoSegmentFormat(HlsVideoSegmentFormat.MPEG2_TS)
-            } else {
-                setContentType(MimeTypes.VIDEO_MP4)
-            }
-        }.build()
-        remoteMediaClient.load(
-            MediaLoadRequestData.Builder().apply {
-                setMediaInfo(mediaInfo)
-                setAutoplay(true)
-                if (!isLive) {
-                    getCurrentPosition()?.let { setCurrentTime(it) }
-                }
-            }.build()
-        ).setResultCallback { result ->
-            if (context != null) {
-                if (result.status.isSuccess) {
-                    // the TV plays it now: show the remote and stop downloading the video on this device
-                    startActivity(Intent(requireContext(), ExpandedControlsActivity::class.java))
-                    close()
-                    (activity as? MainActivity)?.closePlayer()
-                } else {
-                    Toast.makeText(requireContext(), getString(R.string.cast_load_failed, result.status.statusCode), Toast.LENGTH_LONG).show()
-                }
+        CastManager.load(
+            requireActivity(),
+            CastManager.CastMedia(
+                sourceUrl = sourceUrl,
+                isLive = playbackService?.type == BasePlaybackService.STREAM,
+                title = playbackService?.title,
+                subtitle = playbackService?.channelName,
+                thumbnail = playbackService?.thumbnail,
+                positionMs = getCurrentPosition(),
+            )
+        ) { success ->
+            if (success && view != null) {
+                // the TV plays it now: stop downloading the video on this device
+                close()
+                (activity as? MainActivity)?.closePlayer()
             }
         }
         pausePlayback()
