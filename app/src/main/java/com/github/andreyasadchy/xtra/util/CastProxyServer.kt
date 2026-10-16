@@ -4,9 +4,6 @@ import android.content.Context
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.util.Log
-import com.google.android.gms.cast.framework.CastContext
-import com.google.android.gms.cast.framework.CastSession
-import com.google.android.gms.cast.framework.SessionManagerListener
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
@@ -45,21 +42,20 @@ object CastProxyServer {
 
     private var relay: CastRelay? = null
     private var wifiLock: WifiManager.WifiLock? = null
-    private var sessionListener: SessionManagerListener<CastSession>? = null
-    private var castContext: CastContext? = null
 
     /**
      * Returns a URL on this device that serves [url] to the receiver, starting the relay if
-     * needed, or null if the device has no local network address. Must be called on the main thread.
+     * needed, or null if the device has no local network address. [CastManager] stops it when
+     * casting ends.
      */
     @Synchronized
-    fun wrap(context: Context, castContext: CastContext, okHttpClient: OkHttpClient, url: String): String? {
+    fun wrap(context: Context, okHttpClient: OkHttpClient, url: String): String? {
         val address = getLocalAddress() ?: return null
         val relay = relay ?: try {
             CastRelay(okHttpClient).also {
                 it.start()
                 relay = it
-                onStarted(context, castContext)
+                acquireWifiLock(context)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start", e)
@@ -71,16 +67,13 @@ object CastProxyServer {
 
     @Synchronized
     fun stop() {
-        sessionListener?.let { castContext?.sessionManager?.removeSessionManagerListener(it, CastSession::class.java) }
-        sessionListener = null
-        castContext = null
         relay?.stop()
         relay = null
         wifiLock?.let { if (it.isHeld) it.release() }
         wifiLock = null
     }
 
-    private fun onStarted(context: Context, castContext: CastContext) {
+    private fun acquireWifiLock(context: Context) {
         wifiLock = (context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager).createWifiLock(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) WifiManager.WIFI_MODE_FULL_LOW_LATENCY else @Suppress("DEPRECATION") WifiManager.WIFI_MODE_FULL_HIGH_PERF,
             TAG
@@ -88,18 +81,6 @@ object CastProxyServer {
             setReferenceCounted(false)
             acquire()
         }
-        this.castContext = castContext
-        sessionListener = object : SessionManagerListener<CastSession> {
-            override fun onSessionEnded(session: CastSession, error: Int) = stop()
-            override fun onSessionStarting(session: CastSession) {}
-            override fun onSessionStarted(session: CastSession, sessionId: String) {}
-            override fun onSessionStartFailed(session: CastSession, error: Int) {}
-            override fun onSessionEnding(session: CastSession) {}
-            override fun onSessionResuming(session: CastSession, sessionId: String) {}
-            override fun onSessionResumed(session: CastSession, wasSuspended: Boolean) {}
-            override fun onSessionResumeFailed(session: CastSession, error: Int) {}
-            override fun onSessionSuspended(session: CastSession, reason: Int) {}
-        }.also { castContext.sessionManager.addSessionManagerListener(it, CastSession::class.java) }
     }
 
     private fun getLocalAddress(): InetAddress? {

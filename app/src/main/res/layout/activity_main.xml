@@ -29,6 +29,12 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
+        <!-- MiniControllerFragment is added at runtime when Google Play services is available -->
+        <FrameLayout
+            android:id="@+id/castMiniController"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
         <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/navBar"
             android:layout_width="match_parent"

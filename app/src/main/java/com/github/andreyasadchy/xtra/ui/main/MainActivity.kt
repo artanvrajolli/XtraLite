@@ -89,11 +89,16 @@ import com.github.andreyasadchy.xtra.ui.saved.downloads.DownloadsFragment
 import com.github.andreyasadchy.xtra.ui.team.TeamFragmentDirections
 import com.github.andreyasadchy.xtra.ui.top.TopStreamsFragmentDirections
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.CastManager
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.applyTheme
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
 import com.github.andreyasadchy.xtra.util.prefs
 import com.github.andreyasadchy.xtra.util.tokenPrefs
+import com.google.android.gms.cast.framework.CastContext
+import com.google.android.gms.cast.framework.media.widget.MiniControllerFragment
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.material.color.MaterialColors
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -153,6 +158,15 @@ class MainActivity : AppCompatActivity() {
         applyTheme()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this) == ConnectionResult.SUCCESS) {
+            CastContext.getSharedInstance(this, ContextCompat.getMainExecutor(this)).addOnSuccessListener { castContext ->
+                CastManager.init(castContext)
+                // "now casting" bar above the navigation bar; hides itself when nothing is cast
+                if (!isFinishing && !supportFragmentManager.isStateSaved && supportFragmentManager.findFragmentById(R.id.castMiniController) == null) {
+                    supportFragmentManager.beginTransaction().replace(R.id.castMiniController, MiniControllerFragment()).commit()
+                }
+            }
+        }
         setNavBarColor(resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT)
         val ignoreCutouts = prefs.getBoolean(C.UI_DRAW_BEHIND_CUTOUTS, false)
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, windowInsets ->

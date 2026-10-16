@@ -71,6 +71,7 @@ import com.github.andreyasadchy.xtra.ui.game.GamePagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.github.andreyasadchy.xtra.ui.player.PlayerViewModel.Companion.PlayerViewModelFactory
 import com.github.andreyasadchy.xtra.util.C
+import com.github.andreyasadchy.xtra.util.CastManager
 import com.github.andreyasadchy.xtra.util.CastProxyServer
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.getAlertDialogBuilder
@@ -135,7 +136,8 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
     private var castContext: CastContext? = null
     private val castSessionListener = object : SessionManagerListener<CastSession> {
         override fun onSessionStarted(session: CastSession, sessionId: String) {
-            if (view != null) {
+            // a TV switch reloads the video already playing on the TV itself
+            if (view != null && !CastManager.isSwitching) {
                 startCasting(session, true)
             }
         }
@@ -1029,6 +1031,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
         CastContext.getSharedInstance(requireContext(), ContextCompat.getMainExecutor(requireContext())).addOnSuccessListener { castContext ->
             if (view != null) {
                 this.castContext = castContext
+                CastManager.init(castContext)
                 CastButtonFactory.setUpMediaRouteButton(requireContext(), binding.playerControls.cast)
                 binding.playerControls.cast.visibility = View.VISIBLE
                 castContext.sessionManager.removeSessionManagerListener(castSessionListener, CastSession::class.java)
@@ -1057,7 +1060,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
         val isHls = sourceUrl.toUri().path?.endsWith(".mp4") != true
         val url = if (isHls) {
             // Twitch playlists don't allow the receiver's origin, so they are relayed through this device
-            CastProxyServer.wrap(requireContext(), castContext, (requireContext().applicationContext as XtraApp).xtraModule.okHttpClient.value, sourceUrl)
+            CastProxyServer.wrap(requireContext(), (requireContext().applicationContext as XtraApp).xtraModule.okHttpClient.value, sourceUrl)
         } else {
             sourceUrl
         }
@@ -1102,8 +1105,15 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                 }
             }.build()
         ).setResultCallback { result ->
-            if (!result.status.isSuccess && context != null) {
-                Toast.makeText(requireContext(), getString(R.string.cast_load_failed, result.status.statusCode), Toast.LENGTH_LONG).show()
+            if (context != null) {
+                if (result.status.isSuccess) {
+                    // the TV plays it now: show the remote and stop downloading the video on this device
+                    startActivity(Intent(requireContext(), ExpandedControlsActivity::class.java))
+                    close()
+                    (activity as? MainActivity)?.closePlayer()
+                } else {
+                    Toast.makeText(requireContext(), getString(R.string.cast_load_failed, result.status.statusCode), Toast.LENGTH_LONG).show()
+                }
             }
         }
         pausePlayback()

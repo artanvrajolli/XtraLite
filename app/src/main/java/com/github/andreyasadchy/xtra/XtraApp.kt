@@ -15,6 +15,7 @@ import coil3.network.NetworkResponse
 import coil3.network.NetworkResponseBody
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.util.DebugLogger
+import com.github.andreyasadchy.xtra.util.AppIcons
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.NetworkUtils
 import com.github.andreyasadchy.xtra.util.coil.CacheControlCacheStrategy
@@ -39,6 +40,7 @@ class XtraApp : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         INSTANCE = this
         xtraModule = XtraModule(this)
+        AppIcons.ensureLauncherEntry(this)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             val conscrypt = Conscrypt.newProvider()
             Security.insertProviderAt(conscrypt, 1)

@@ -20,26 +20,26 @@ object AppIcons {
 
     val icons = listOf(
         AppIcon("lite", R.string.app_icon_lite, R.mipmap.ic_launcher),
-        AppIcon("classic", R.string.app_icon_classic, R.mipmap.ic_launcher_classic),
-        AppIcon("flat", R.string.app_icon_flat, R.mipmap.ic_launcher_flat),
-        AppIcon("minimal", R.string.app_icon_minimal, R.mipmap.ic_launcher_minimal),
-        AppIcon("minimal_dark", R.string.app_icon_minimal_dark, R.mipmap.ic_launcher_minimal_dark),
-        AppIcon("midnight", R.string.app_icon_midnight, R.mipmap.ic_launcher_midnight),
-        AppIcon("amoled", R.string.app_icon_amoled, R.mipmap.ic_launcher_amoled),
-        AppIcon("ocean", R.string.app_icon_ocean, R.mipmap.ic_launcher_ocean),
-        AppIcon("deep_sea", R.string.app_icon_deep_sea, R.mipmap.ic_launcher_deep_sea),
-        AppIcon("forest", R.string.app_icon_forest, R.mipmap.ic_launcher_forest),
-        AppIcon("emerald", R.string.app_icon_emerald, R.mipmap.ic_launcher_emerald),
-        AppIcon("mint", R.string.app_icon_mint, R.mipmap.ic_launcher_mint),
-        AppIcon("sky", R.string.app_icon_sky, R.mipmap.ic_launcher_sky),
-        AppIcon("sunset", R.string.app_icon_sunset, R.mipmap.ic_launcher_sunset),
-        AppIcon("amber", R.string.app_icon_amber, R.mipmap.ic_launcher_amber),
-        AppIcon("crimson", R.string.app_icon_crimson, R.mipmap.ic_launcher_crimson),
-        AppIcon("rose", R.string.app_icon_rose, R.mipmap.ic_launcher_rose),
-        AppIcon("grape", R.string.app_icon_grape, R.mipmap.ic_launcher_grape),
-        AppIcon("neon", R.string.app_icon_neon, R.mipmap.ic_launcher_neon),
-        AppIcon("mono_light", R.string.app_icon_mono_light, R.mipmap.ic_launcher_mono_light),
-        AppIcon("mono_dark", R.string.app_icon_mono_dark, R.mipmap.ic_launcher_mono_dark),
+        AppIcon("retro_tv", R.string.app_icon_retro_tv, R.mipmap.ic_launcher_retro_tv),
+        AppIcon("bolt", R.string.app_icon_bolt, R.mipmap.ic_launcher_bolt),
+        AppIcon("star", R.string.app_icon_star, R.mipmap.ic_launcher_star),
+        AppIcon("leaf", R.string.app_icon_leaf, R.mipmap.ic_launcher_leaf),
+        AppIcon("rocket", R.string.app_icon_rocket, R.mipmap.ic_launcher_rocket),
+        AppIcon("invader", R.string.app_icon_invader, R.mipmap.ic_launcher_invader),
+        AppIcon("headphones", R.string.app_icon_headphones, R.mipmap.ic_launcher_headphones),
+        AppIcon("broadcast", R.string.app_icon_broadcast, R.mipmap.ic_launcher_broadcast),
+        AppIcon("diamond", R.string.app_icon_diamond, R.mipmap.ic_launcher_diamond),
+        AppIcon("moon", R.string.app_icon_moon, R.mipmap.ic_launcher_moon),
+        AppIcon("sun", R.string.app_icon_sun, R.mipmap.ic_launcher_sun),
+        AppIcon("wave", R.string.app_icon_wave, R.mipmap.ic_launcher_wave),
+        AppIcon("flame", R.string.app_icon_flame, R.mipmap.ic_launcher_flame),
+        AppIcon("crown", R.string.app_icon_crown, R.mipmap.ic_launcher_crown),
+        AppIcon("ghost", R.string.app_icon_ghost, R.mipmap.ic_launcher_ghost),
+        AppIcon("cat", R.string.app_icon_cat, R.mipmap.ic_launcher_cat),
+        AppIcon("heart", R.string.app_icon_heart, R.mipmap.ic_launcher_heart),
+        AppIcon("clapper", R.string.app_icon_clapper, R.mipmap.ic_launcher_clapper),
+        AppIcon("gamepad", R.string.app_icon_gamepad, R.mipmap.ic_launcher_gamepad),
+        AppIcon("planet", R.string.app_icon_planet, R.mipmap.ic_launcher_planet),
     )
 
     fun getCurrent(context: Context): AppIcon {
@@ -51,6 +51,24 @@ object AppIcons {
                 else -> false
             }
         } ?: icons.first()
+    }
+
+    /**
+     * Re-enables the default icon if no launcher entry is enabled, e.g. after an update removed
+     * the icon the user had picked.
+     */
+    fun ensureLauncherEntry(context: Context) {
+        val packageManager = context.packageManager
+        val anyEnabled = icons.any {
+            when (packageManager.getComponentEnabledSetting(ComponentName(context.packageName, it.aliasName))) {
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED -> true
+                PackageManager.COMPONENT_ENABLED_STATE_DEFAULT -> it.id == DEFAULT
+                else -> false
+            }
+        }
+        if (!anyEnabled) {
+            setCurrent(context, icons.first { it.id == DEFAULT })
+        }
     }
 
     fun setCurrent(context: Context, icon: AppIcon) {
