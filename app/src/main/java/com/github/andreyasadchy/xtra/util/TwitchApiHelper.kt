@@ -55,8 +55,8 @@ object TwitchApiHelper {
     fun getStreamThumbnail(url: String?): String? {
         return when {
             url.isNullOrBlank() -> "https://static-cdn.jtvnw.net/ttv-static/404_preview-440x248.jpg"
-            url.contains("{width}x{height}") -> url.replace("{width}", "1280").replace("{height}", "720")
-            else -> url.replace(imageSizeRegex, "-1280x720.")
+            url.contains("{width}x{height}") -> url.replace("{width}", "640").replace("{height}", "360")
+            else -> url.replace(imageSizeRegex, "-640x360.")
         }
     }
 
@@ -65,14 +65,14 @@ object TwitchApiHelper {
             url.isNullOrBlank() || url.startsWith("https://vod-secure.twitch.tv/_404/404_processing") -> {
                 "https://vod-secure.twitch.tv/_404/404_processing_320x180.png"
             }
-            url.contains("{width}x{height}") -> url.replace("{width}", "1280").replace("{height}", "720")
-            url.contains("%{width}x%{height}") -> url.replace("%{width}", "1280").replace("%{height}", "720")
-            else -> url.replace(imageSizeRegex, "-1280x720.")
+            url.contains("{width}x{height}") -> url.replace("{width}", "640").replace("{height}", "360")
+            url.contains("%{width}x%{height}") -> url.replace("%{width}", "640").replace("%{height}", "360")
+            else -> url.replace(imageSizeRegex, "-640x360.")
         }
     }
 
     fun getClipThumbnail(url: String?): String? {
-        return url?.replace(imageSizeRegex, "-1280x720.")
+        return url?.replace(imageSizeRegex, "-640x360.")
     }
 
     fun getGameBoxArt(url: String?): String? {
@@ -84,7 +84,7 @@ object TwitchApiHelper {
     }
 
     fun getProfileImage(url: String?): String? {
-        return url?.replace(imageSizeRegex, "-300x300.")
+        return url?.replace(imageSizeRegex, "-150x150.")
     }
 
     fun getType(context: Context, type: String?): String? {

@@ -156,7 +156,7 @@ abstract class BasePlaybackService : LifecycleService() {
         val networkCapabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
         val cellular = networkCapabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true
         val defaultQuality = if (cellular) {
-            prefs().getString(C.PLAYER_DEFAULT_CELLULAR_QUALITY, "saved")
+            prefs().getString(C.PLAYER_DEFAULT_CELLULAR_QUALITY, "480")
         } else {
             prefs().getString(C.PLAYER_DEFAULT_QUALITY, "saved")
         }?.substringBefore(" ")

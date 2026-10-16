@@ -10,6 +10,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupWithNavController
@@ -36,6 +37,7 @@ import com.google.android.material.tabs.TabLayoutMediator
 class FollowPagerFragment : Fragment(), Scrollable, FragmentHost {
 
     private var _binding: FragmentMediaPagerBinding? = null
+    private var pageChangeCallback: ViewPager2.OnPageChangeCallback? = null
     private val binding get() = _binding!!
     private var firstLaunch = true
 
@@ -44,6 +46,16 @@ class FollowPagerFragment : Fragment(), Scrollable, FragmentHost {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        childFragmentManager.registerFragmentLifecycleCallbacks(object : FragmentManager.FragmentLifecycleCallbacks() {
+            override fun onFragmentViewCreated(fm: FragmentManager, f: Fragment, v: View, savedInstanceState: Bundle?) {
+                // tabs are created when first shown, which can be after onPageSelected already ran for them
+                _binding?.viewPager?.currentItem?.let { position ->
+                    if (f.tag == "f$position") {
+                        pageChangeCallback?.onPageSelected(position)
+                    }
+                }
+            }
+        }, false)
         firstLaunch = savedInstanceState == null
     }
 
@@ -123,7 +135,7 @@ class FollowPagerFragment : Fragment(), Scrollable, FragmentHost {
             }
             val adapter = FollowPagerAdapter(this@FollowPagerFragment, tabs)
             viewPager.adapter = adapter
-            viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            val pageChangeCallback = object : ViewPager2.OnPageChangeCallback() {
                 override fun onPageSelected(position: Int) {
                     viewPager.doOnLayout {
                         childFragmentManager.findFragmentByTag("f${position}")?.let { fragment ->
@@ -152,7 +164,9 @@ class FollowPagerFragment : Fragment(), Scrollable, FragmentHost {
                         }
                     }
                 }
-            })
+            }
+            this@FollowPagerFragment.pageChangeCallback = pageChangeCallback
+            viewPager.registerOnPageChangeCallback(pageChangeCallback)
             if (firstLaunch) {
                 val defaultItem = tabList.find { it.split(':')[1] != "0" }?.split(':')[0] ?: "1"
                 viewPager.setCurrentItem(
@@ -161,7 +175,6 @@ class FollowPagerFragment : Fragment(), Scrollable, FragmentHost {
                 )
                 firstLaunch = false
             }
-            viewPager.offscreenPageLimit = adapter.itemCount
             viewPager.reduceDragSensitivity()
             TabLayoutMediator(tabLayout, viewPager) { tab, position ->
                 tab.text = when (tabs.getOrNull(position)) {
@@ -189,6 +202,7 @@ class FollowPagerFragment : Fragment(), Scrollable, FragmentHost {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        pageChangeCallback = null
         _binding = null
     }
 }

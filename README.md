@@ -11,6 +11,13 @@ XtraLite is a lightweight Twitch player and browser for Android, based on [Xtra]
 
 - **No chat.** Live chat, chat replay, chat downloads, emotes and all chat settings are removed. Login only requests the `user:read:follows` scope.
 - **Skip silence** for videos, clips and downloads (ExoPlayer only), as in [Twire](https://github.com/twireapp/Twire). Toggle it from the player menu; the choice is remembered.
+- **Lighter on data and battery:**
+  - In the background (screen off, app closed) playback switches to the audio-only stream instead of downloading video you can't see.
+  - On mobile data, streams and videos start at 480p by default (Settings → Player → Default quality on mobile data).
+  - On mobile data the player buffers at most 25 s ahead instead of 50 s (Settings → Buffer).
+  - List thumbnails and avatars are requested at about a third of the previous file size.
+  - Tabs on channel, game, following, search and saved pages load when you open them, not all at once.
+  - "Use HTTP proxies" and "Use video swap" are marked in settings as using extra data during ads.
 - **Cast to TV** with Google Cast (Chromecast, Android TV, Google TV). Use the cast button in the player controls; it can be hidden under Settings → Player buttons. Requires Google Play services.
 
 XtraLite installs as a separate app (`com.github.artanvrajolli.xtralite`) and can live next to Xtra.

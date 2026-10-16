@@ -685,9 +685,10 @@ class ExoPlayerService : BasePlaybackService() {
             val player = ExoPlayer.Builder(this).apply {
                 setLoadControl(
                     DefaultLoadControl.Builder().apply {
+                        val minBuffer = prefs().getString(C.PLAYER_BUFFER_MIN, "15000")?.toIntOrNull() ?: 15000
                         setBufferDurationsMs(
-                            prefs().getString(C.PLAYER_BUFFER_MIN, "15000")?.toIntOrNull() ?: 15000,
-                            prefs().getString(C.PLAYER_BUFFER_MAX, "50000")?.toIntOrNull() ?: 50000,
+                            minBuffer,
+                            getMaxBufferMs(minBuffer),
                             prefs().getString(C.PLAYER_BUFFER_PLAYBACK, "2000")?.toIntOrNull() ?: 2000,
                             prefs().getString(C.PLAYER_BUFFER_REBUFFER, "2000")?.toIntOrNull() ?: 2000
                         )
@@ -1598,12 +1599,25 @@ class ExoPlayerService : BasePlaybackService() {
                     val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
                     val networkCapabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
                     val cellular = networkCapabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true
-                    if ((!cellular && prefs().getString(C.PLAYER_DEFAULT_QUALITY, "saved") == "saved") || (cellular && prefs().getString(C.PLAYER_DEFAULT_CELLULAR_QUALITY, "saved") == "saved")) {
+                    if ((!cellular && prefs().getString(C.PLAYER_DEFAULT_QUALITY, "saved") == "saved") || (cellular && prefs().getString(C.PLAYER_DEFAULT_CELLULAR_QUALITY, "480") == "saved")) {
                         prefs().edit { putString(C.PLAYER_QUALITY, quality.name) }
                     }
                 }
             }
         }
+    }
+
+    private fun getMaxBufferMs(minBufferMs: Int): Int {
+        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        val networkCapabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+        val cellular = networkCapabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true
+        // buffering far ahead on mobile data wastes data when the user seeks or closes the player
+        val maxBuffer = if (cellular) {
+            prefs().getString(C.PLAYER_BUFFER_MAX_CELLULAR, "25000")?.toIntOrNull() ?: 25000
+        } else {
+            prefs().getString(C.PLAYER_BUFFER_MAX, "50000")?.toIntOrNull() ?: 50000
+        }
+        return maxOf(maxBuffer, minBufferMs)
     }
 
     fun toggleSubtitles(enabled: Boolean) {
@@ -1707,9 +1721,10 @@ class ExoPlayerService : BasePlaybackService() {
             val player = ExoPlayer.Builder(this@ExoPlayerService).apply {
                 setLoadControl(
                     DefaultLoadControl.Builder().apply {
+                        val minBuffer = prefs().getString(C.PLAYER_BUFFER_MIN, "15000")?.toIntOrNull() ?: 15000
                         setBufferDurationsMs(
-                            prefs().getString(C.PLAYER_BUFFER_MIN, "15000")?.toIntOrNull() ?: 15000,
-                            prefs().getString(C.PLAYER_BUFFER_MAX, "50000")?.toIntOrNull() ?: 50000,
+                            minBuffer,
+                            getMaxBufferMs(minBuffer),
                             prefs().getString(C.PLAYER_BUFFER_PLAYBACK, "2000")?.toIntOrNull() ?: 2000,
                             prefs().getString(C.PLAYER_BUFFER_REBUFFER, "2000")?.toIntOrNull() ?: 2000
                         )
@@ -2184,7 +2199,7 @@ class ExoPlayerService : BasePlaybackService() {
                                 setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
                             }.build()
                         }
-                        if (prefs().getBoolean(C.PLAYER_USE_BACKGROUND_AUDIO_TRACK, false)) {
+                        if (prefs().getBoolean(C.PLAYER_USE_BACKGROUND_AUDIO_TRACK, true)) {
                             quality.url?.let { url ->
                                 val position = player.currentPosition
                                 if (qualities?.find { it.name == VideoQuality.AUTO_QUALITY } != null) {
@@ -2220,7 +2235,7 @@ class ExoPlayerService : BasePlaybackService() {
                                     setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_VIDEO, true)
                                 }.build()
                             }
-                            if (prefs().getBoolean(C.PLAYER_USE_BACKGROUND_AUDIO_TRACK, false)) {
+                            if (prefs().getBoolean(C.PLAYER_USE_BACKGROUND_AUDIO_TRACK, true)) {
                                 quality.url?.let { url ->
                                     val position = player.currentPosition
                                     if (qualities?.find { it.name == VideoQuality.AUTO_QUALITY } != null) {

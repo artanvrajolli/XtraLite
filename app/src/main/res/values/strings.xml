@@ -583,7 +583,7 @@
     <string name="platform_param">Platform</string>
     <string name="player_type_param">Player type</string>
     <string name="use_video_swap">Use video swap</string>
-    <string name="use_video_swap_desc">Swaps playlist during ads</string>
+    <string name="use_video_swap_desc">Swaps playlist during ads. Streams twice while an ad plays, which uses extra data</string>
     <string name="video_swap_settings">Video swap settings</string>
     <string name="default_values">Default values</string>
     <string name="add_item">Add item</string>
@@ -599,4 +599,6 @@
     <string name="skip_silence">Skip silence</string>
     <string name="cast_to_tv">Cast to TV</string>
     <string name="cast_video_unavailable">This video can\'t be cast</string>
+    <string name="max_buffer_cellular">Maximum buffer on mobile data</string>
+    <string name="use_stream_proxies_desc">Streams twice while an ad plays, which uses extra data</string>
 </resources>

@@ -23,6 +23,7 @@ import androidx.core.view.marginBottom
 import androidx.core.view.marginTop
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -81,6 +82,7 @@ import kotlin.time.Instant
 class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, IntegrityDialog.Listener {
 
     private var _binding: FragmentChannelBinding? = null
+    private var pageChangeCallback: ViewPager2.OnPageChangeCallback? = null
     private val binding get() = _binding!!
     private val args: ChannelPagerFragmentArgs by navArgs()
     private val viewModel: ChannelPagerViewModel by viewModels { ChannelPagerViewModelFactory }
@@ -91,6 +93,16 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        childFragmentManager.registerFragmentLifecycleCallbacks(object : FragmentManager.FragmentLifecycleCallbacks() {
+            override fun onFragmentViewCreated(fm: FragmentManager, f: Fragment, v: View, savedInstanceState: Bundle?) {
+                // tabs are created when first shown, which can be after onPageSelected already ran for them
+                _binding?.viewPager?.currentItem?.let { position ->
+                    if (f.tag == "f$position") {
+                        pageChangeCallback?.onPageSelected(position)
+                    }
+                }
+            }
+        }, false)
         firstLaunch = savedInstanceState == null
     }
 
@@ -463,7 +475,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                 appBar.background = null
                 collapsingToolbar.setContentScrimColor(MaterialColors.getColor(collapsingToolbar, com.google.android.material.R.attr.colorSurface))
             }
-            viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            val pageChangeCallback = object : ViewPager2.OnPageChangeCallback() {
                 private val layoutParams = collapsingToolbar.layoutParams as AppBarLayout.LayoutParams
                 private val originalScrollFlags = layoutParams.scrollFlags
 
@@ -491,7 +503,9 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                         }
                     }
                 }
-            })
+            }
+            this@ChannelPagerFragment.pageChangeCallback = pageChangeCallback
+            viewPager.registerOnPageChangeCallback(pageChangeCallback)
             if (firstLaunch) {
                 val defaultItem = tabList.find { it.split(':')[1] != "0" }?.split(':')[0] ?: "1"
                 viewPager.setCurrentItem(
@@ -500,7 +514,6 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
                 )
                 firstLaunch = false
             }
-            viewPager.offscreenPageLimit = adapter.itemCount
             viewPager.reduceDragSensitivity()
             TabLayoutMediator(tabLayout, viewPager) { tab, position ->
                 tab.text = when (tabs.getOrNull(position)) {
@@ -868,6 +881,7 @@ class ChannelPagerFragment : BaseNetworkFragment(), Scrollable, FragmentHost, In
 
     override fun onDestroyView() {
         super.onDestroyView()
+        pageChangeCallback = null
         _binding = null
     }
 }

@@ -92,6 +92,7 @@
     <SwitchPreferenceCompat
         android:defaultValue="false"
         android:key="player_use_stream_proxy"
+        android:summary="@string/use_stream_proxies_desc"
         android:title="@string/use_stream_proxies"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />

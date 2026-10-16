@@ -11,6 +11,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnLayout
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -46,6 +47,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
 
     private var _binding: FragmentSearchBinding? = null
+    private var pageChangeCallback: ViewPager2.OnPageChangeCallback? = null
     private val binding get() = _binding!!
     private val viewModel: SearchPagerViewModel by viewModels { SearchPagerViewModelFactory }
     private var firstLaunch = true
@@ -55,6 +57,16 @@ class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        childFragmentManager.registerFragmentLifecycleCallbacks(object : FragmentManager.FragmentLifecycleCallbacks() {
+            override fun onFragmentViewCreated(fm: FragmentManager, f: Fragment, v: View, savedInstanceState: Bundle?) {
+                // tabs are created when first shown, which can be after onPageSelected already ran for them
+                _binding?.viewPager?.currentItem?.let { position ->
+                    if (f.tag == "f$position") {
+                        pageChangeCallback?.onPageSelected(position)
+                    }
+                }
+            }
+        }, false)
         firstLaunch = savedInstanceState == null
     }
 
@@ -107,7 +119,7 @@ class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
             }
             val adapter = SearchPagerAdapter(this@SearchPagerFragment, tabs)
             viewPager.adapter = adapter
-            viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            val pageChangeCallback = object : ViewPager2.OnPageChangeCallback() {
                 override fun onPageSelected(position: Int) {
                     (currentFragment as? Searchable)?.search(binding.searchView.query.toString())
                     viewPager.doOnLayout {
@@ -137,7 +149,9 @@ class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
                         }
                     }
                 }
-            })
+            }
+            this@SearchPagerFragment.pageChangeCallback = pageChangeCallback
+            viewPager.registerOnPageChangeCallback(pageChangeCallback)
             if (firstLaunch) {
                 val defaultItem = tabList.find { it.split(':')[1] != "0" }?.split(':')[0] ?: "2"
                 viewPager.setCurrentItem(
@@ -146,7 +160,6 @@ class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
                 )
                 firstLaunch = false
             }
-            viewPager.offscreenPageLimit = adapter.itemCount
             viewPager.reduceDragSensitivity()
             TabLayoutMediator(tabLayout, viewPager) { tab, position ->
                 tab.text = when (tabs.getOrNull(position)) {
@@ -281,6 +294,7 @@ class SearchPagerFragment : BaseNetworkFragment(), FragmentHost {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        pageChangeCallback = null
         _binding = null
     }
 }

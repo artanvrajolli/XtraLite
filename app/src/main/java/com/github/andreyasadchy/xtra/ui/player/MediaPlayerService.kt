@@ -1398,7 +1398,7 @@ class MediaPlayerService : BasePlaybackService() {
                 val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
                 val networkCapabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
                 val cellular = networkCapabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true
-                if ((!cellular && prefs().getString(C.PLAYER_DEFAULT_QUALITY, "saved") == "saved") || (cellular && prefs().getString(C.PLAYER_DEFAULT_CELLULAR_QUALITY, "saved") == "saved")) {
+                if ((!cellular && prefs().getString(C.PLAYER_DEFAULT_QUALITY, "saved") == "saved") || (cellular && prefs().getString(C.PLAYER_DEFAULT_CELLULAR_QUALITY, "480") == "saved")) {
                     prefs().edit { putString(C.PLAYER_QUALITY, quality.name) }
                 }
             }
@@ -1421,7 +1421,7 @@ class MediaPlayerService : BasePlaybackService() {
                     if (prefs().getBoolean(C.PLAYER_DISABLE_BACKGROUND_VIDEO, true)) {
                         serviceListener?.changeSurfaceVisibility(false)
                     }
-                    if (prefs().getBoolean(C.PLAYER_USE_BACKGROUND_AUDIO_TRACK, false)) {
+                    if (prefs().getBoolean(C.PLAYER_USE_BACKGROUND_AUDIO_TRACK, true)) {
                         quality.url?.let { url ->
                             val position = player.currentPosition.toLong()
                             player.reset()
@@ -1454,7 +1454,7 @@ class MediaPlayerService : BasePlaybackService() {
                         if (prefs().getBoolean(C.PLAYER_DISABLE_BACKGROUND_VIDEO, true)) {
                             serviceListener?.changeSurfaceVisibility(false)
                         }
-                        if (prefs().getBoolean(C.PLAYER_USE_BACKGROUND_AUDIO_TRACK, false)) {
+                        if (prefs().getBoolean(C.PLAYER_USE_BACKGROUND_AUDIO_TRACK, true)) {
                             quality.url?.let { url ->
                                 val position = player.currentPosition.toLong()
                                 player.reset()

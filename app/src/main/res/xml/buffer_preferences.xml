@@ -22,6 +22,16 @@
         app:useSimpleSummaryProvider="true" />
 
     <EditTextPreference
+        android:defaultValue="25000"
+        android:key="player_buffer_max_cellular"
+        android:singleLine="true"
+        android:title="@string/max_buffer_cellular"
+        app:dialogMessage="@string/max_buffer_summary"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false"
+        app:useSimpleSummaryProvider="true" />
+
+    <EditTextPreference
         android:defaultValue="2000"
         android:key="player_buffer_playback"
         android:singleLine="true"

@@ -157,6 +157,7 @@ object C {
     const val PLAYER_LIVE_TARGET_OFFSET = "player_live_target_offset"
     const val PLAYER_BUFFER_MIN = "player_buffer_min"
     const val PLAYER_BUFFER_MAX = "player_buffer_max"
+    const val PLAYER_BUFFER_MAX_CELLULAR = "player_buffer_max_cellular"
     const val PLAYER_BUFFER_PLAYBACK = "player_buffer_playback"
     const val PLAYER_BUFFER_REBUFFER = "player_buffer_rebuffer"
     const val PLAYER_BACKGROUND_PLAYBACK = "player_background_playback"
