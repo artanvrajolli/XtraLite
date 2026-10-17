@@ -58,6 +58,13 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.TimeBar
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.target
+import coil3.request.transformations
+import coil3.transform.CircleCropTransformation
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.databinding.FragmentPlayerBinding
 import com.github.andreyasadchy.xtra.model.VideoQuality
@@ -66,6 +73,7 @@ import com.github.andreyasadchy.xtra.ui.channel.ChannelPagerFragmentDirections
 import com.github.andreyasadchy.xtra.ui.common.BaseNetworkFragment
 import com.github.andreyasadchy.xtra.ui.common.IntegrityDialog
 import com.github.andreyasadchy.xtra.ui.common.RadioButtonDialogFragment
+import com.github.andreyasadchy.xtra.ui.common.VideosAdapter
 import com.github.andreyasadchy.xtra.ui.download.DownloadDialog
 import com.github.andreyasadchy.xtra.ui.game.GameMediaFragmentDirections
 import com.github.andreyasadchy.xtra.ui.game.GamePagerFragmentDirections
@@ -281,15 +289,12 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                 requireContext(),
                 object : GestureDetector.SimpleOnGestureListener() {
                     override fun onSingleTapUp(e: MotionEvent): Boolean {
-                        val visible = playerControls.root.isVisible
-                        if (visible) {
-                            if (controllerHideOnTouch) {
-                                hideController()
-                            }
+                        if (playerControls.root.isVisible) {
+                            // like YouTube: with the controls showing, tapping the video (not a button) plays or pauses
+                            playPause()
+                            showController(force = true)
                         } else {
                             showController()
-                        }
-                        if (!visible) {
                             updateProgress()
                         }
                         return true
@@ -453,6 +458,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                             swipeMode = SWIPE_NONE
                             swipeStartX = x
                             swipeStartY = y
+                            hideSwipeHint()
                             downAction(event)
                         }
                         MotionEvent.ACTION_POINTER_DOWN -> {
@@ -681,6 +687,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                 playbackService?.restoreQuality = false
                 changeQuality(playbackService?.previousQuality)
             }
+            setUpChannelPanel()
             with(playerControls) {
                 val channelLogin = playbackService?.channelLogin
                 val channelName = playbackService?.channelName
@@ -1029,6 +1036,104 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
         }
     }
 
+    /** The streamer's channel and recent videos below the video in portrait, like the YouTube watch page. */
+    private fun setUpChannelPanel() {
+        val service = playbackService ?: return
+        with(binding) {
+            if (service.type == BasePlaybackService.OFFLINE_VIDEO || (service.channelId.isNullOrBlank() && service.channelLogin.isNullOrBlank())) {
+                channelPanel.visibility = View.GONE
+                return
+            }
+            channelPanel.visibility = View.VISIBLE
+            channelPanelName.text = service.channelName ?: service.channelLogin
+            val info = listOfNotNull(service.title?.takeIf { it.isNotBlank() }, service.gameName?.takeIf { it.isNotBlank() }).joinToString(" · ")
+            channelPanelInfo.text = info
+            channelPanelInfo.visibility = if (info.isNotEmpty()) View.VISIBLE else View.GONE
+            val image = service.channelImage
+            if (image != null) {
+                channelPanelImage.visibility = View.VISIBLE
+                requireContext().imageLoader.enqueue(
+                    ImageRequest.Builder(requireContext()).apply {
+                        data(image)
+                        if (requireContext().prefs().getBoolean(C.UI_ROUND_USER_IMAGE, true)) {
+                            transformations(CircleCropTransformation())
+                        }
+                        crossfade(true)
+                        target(channelPanelImage)
+                    }.build()
+                )
+            } else {
+                channelPanelImage.visibility = View.GONE
+            }
+            val openChannel = View.OnClickListener {
+                findNavController().navigate(
+                    ChannelPagerFragmentDirections.actionGlobalChannelPagerFragment(
+                        channelId = service.channelId,
+                        channelLogin = service.channelLogin,
+                        channelName = service.channelName,
+                    )
+                )
+                minimize()
+            }
+            channelPanelHeader.setOnClickListener(openChannel)
+            channelPanelOpen.setOnClickListener(openChannel)
+            val adapter = VideosAdapter(this@PlayerFragment, {
+                DownloadDialog.newVideoInstance(
+                    id = it.id,
+                    channelId = it.channelId,
+                    channelLogin = it.channelLogin,
+                    channelName = it.channelName,
+                    channelImage = it.channelImage,
+                    gameId = it.gameId,
+                    gameSlug = it.gameSlug,
+                    gameName = it.gameName,
+                    title = it.title,
+                    thumbnail = it.thumbnail,
+                    createdAt = it.createdAt,
+                    durationSeconds = it.durationSeconds,
+                    type = it.type,
+                    animatedPreviewUrl = it.animatedPreviewURL,
+                ).show(childFragmentManager, null)
+            }, {
+                viewModel.saveBookmark(
+                    requireContext().filesDir.path,
+                    requireContext().prefs().getString(C.NETWORK_LIBRARY, C.OKHTTP),
+                    TwitchApiHelper.getHelixHeaders(requireContext()),
+                    TwitchApiHelper.getGQLHeaders(requireContext()),
+                    it.id,
+                    it.title,
+                    it.createdAt,
+                    it.durationSeconds,
+                    it.type,
+                    it.animatedPreviewURL,
+                    it.channelId,
+                    it.channelLogin,
+                    it.channelName,
+                    it.channelImage,
+                    it.thumbnail,
+                    it.gameId,
+                    it.gameSlug,
+                    it.gameName,
+                )
+            }, showGame = false, showChannel = false)
+            channelPanelVideos.layoutManager = LinearLayoutManager(requireContext())
+            channelPanelVideos.adapter = adapter
+            viewModel.loadChannelVideos(
+                service.channelId,
+                service.channelLogin,
+                requireContext().prefs().getString(C.NETWORK_LIBRARY, C.OKHTTP),
+                TwitchApiHelper.getGQLHeaders(requireContext()),
+                TwitchApiHelper.getHelixHeaders(requireContext()),
+                requireContext().prefs().getBoolean(C.ENABLE_INTEGRITY, false),
+            )
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.channelVideos.collectLatest { adapter.submitData(it) }
+                }
+            }
+        }
+    }
+
     fun canWatchFullVideo() = playbackService?.type == BasePlaybackService.CLIP && !playbackService?.videoId.isNullOrBlank()
 
     fun watchFullVideo() {
@@ -1207,6 +1312,9 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                 }
                 aspectRatioFrameLayout.resizeMode = resizeMode
                 playerLayout.isPortrait = false
+                if (isMaximized) {
+                    showSwipeHint()
+                }
                 secondaryLayout.isPortrait = false
                 with(playerControls) {
                     if (requireContext().prefs().getBoolean(C.PLAYER_FULLSCREEN, true)) {
@@ -1262,6 +1370,34 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
             val percent = (value * 100).roundToInt()
             swipeProgress.progress = percent
             swipeValue.text = getString(R.string.swipe_percent, percent)
+        }
+    }
+
+    /** Shows where the swipe gestures are, the first time fullscreen opens in this app session. */
+    private fun showSwipeHint() {
+        val isInPIPMode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && requireActivity().isInPictureInPictureMode
+        if (swipeHintShown || isPortrait || isInPIPMode || !requireContext().prefs().getBoolean(C.PLAYER_SWIPE_CONTROLS, true)) {
+            return
+        }
+        swipeHintShown = true
+        with(binding.swipeHint) {
+            animate().cancel()
+            alpha = 0f
+            visibility = View.VISIBLE
+            animate().alpha(1f).setDuration(200).withEndAction {
+                animate().alpha(0f).setStartDelay(3000).setDuration(400).withEndAction {
+                    visibility = View.GONE
+                }.start()
+            }.start()
+        }
+    }
+
+    private fun hideSwipeHint() {
+        _binding?.swipeHint?.let {
+            if (it.visibility == View.VISIBLE) {
+                it.animate().cancel()
+                it.animate().alpha(0f).setStartDelay(0).setDuration(150).withEndAction { it.visibility = View.GONE }.start()
+            }
         }
     }
 
@@ -1872,6 +2008,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                     slidingLayout.scaleY = 1f
                 }
                 secondaryLayout.visibility = View.GONE
+                hideSwipeHint()
                 useController = false
                 controllerAnimation?.cancel()
                 binding.playerControls.root.alpha = 0f
@@ -1891,6 +2028,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
 
     fun minimize() {
         resetBrightness()
+        hideSwipeHint()
         with(binding) {
             isMaximized = false
             backPressedCallback.remove()
@@ -1969,6 +2107,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                 secondaryLayout.visibility = View.VISIBLE
             } else {
                 hideStatusBar()
+                showSwipeHint()
             }
             slidingLayout.animate().apply {
                 translationX(0f)
@@ -2244,6 +2383,9 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
         private const val SWIPE_NONE = 0
         private const val SWIPE_BRIGHTNESS = 1
         private const val SWIPE_VOLUME = 2
+
+        // the swipe gesture hint is shown once per app session
+        private var swipeHintShown = false
         private const val REQUEST_CODE_SPEED = 1
         private const val REQUEST_CODE_AUDIO_ONLY = 2
         private const val REQUEST_CODE_PLAY_PAUSE = 3

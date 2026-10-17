@@ -7,7 +7,11 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
 import com.github.andreyasadchy.xtra.XtraApp
+import com.github.andreyasadchy.xtra.graphql.type.VideoSort
 import com.github.andreyasadchy.xtra.model.NotificationUser
 import com.github.andreyasadchy.xtra.model.ShownNotification
 import com.github.andreyasadchy.xtra.model.VideoQuality
@@ -22,17 +26,21 @@ import com.github.andreyasadchy.xtra.repository.HelixRepository
 import com.github.andreyasadchy.xtra.repository.LocalChannelFollowsRepository
 import com.github.andreyasadchy.xtra.repository.NotificationsRepository
 import com.github.andreyasadchy.xtra.repository.PlayerRepository
+import com.github.andreyasadchy.xtra.repository.datasource.ChannelVideosDataSource
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.NetworkUtils
 import com.github.andreyasadchy.xtra.util.NetworkUtils.executeAsync
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -67,6 +75,49 @@ class PlayerViewModel(
 ) : ViewModel() {
 
     val integrity = MutableSharedFlow<String?>()
+
+    private class ChannelVideosRequest(
+        val channelId: String?,
+        val channelLogin: String?,
+        val networkLibrary: String?,
+        val gqlHeaders: Map<String, String>,
+        val helixHeaders: Map<String, String>,
+        val enableIntegrity: Boolean,
+    )
+
+    private val channelVideosRequest = MutableStateFlow<ChannelVideosRequest?>(null)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val channelVideos = channelVideosRequest.filterNotNull().flatMapLatest { request ->
+        Pager(
+            PagingConfig(pageSize = 20, prefetchDistance = 3, initialLoadSize = 20)
+        ) {
+            ChannelVideosDataSource(
+                channelId = request.channelId,
+                channelLogin = request.channelLogin,
+                gqlQueryType = null,
+                gqlQuerySort = VideoSort.TIME,
+                gqlType = null,
+                gqlSort = "TIME",
+                helixPeriod = "all",
+                helixBroadcastTypes = "all",
+                helixSort = "time",
+                gqlHeaders = request.gqlHeaders,
+                graphQLRepository = graphQLRepository,
+                helixHeaders = request.helixHeaders,
+                helixRepository = helixRepository,
+                enableIntegrity = request.enableIntegrity,
+                networkLibrary = request.networkLibrary,
+            )
+        }.flow
+    }.cachedIn(viewModelScope)
+
+    fun loadChannelVideos(channelId: String?, channelLogin: String?, networkLibrary: String?, gqlHeaders: Map<String, String>, helixHeaders: Map<String, String>, enableIntegrity: Boolean) {
+        val current = channelVideosRequest.value
+        if (current == null || current.channelId != channelId || current.channelLogin != channelLogin) {
+            channelVideosRequest.value = ChannelVideosRequest(channelId, channelLogin, networkLibrary, gqlHeaders, helixHeaders, enableIntegrity)
+        }
+    }
 
     val stream = MutableStateFlow<Stream?>(null)
     private var streamUpdateJob: Job? = null

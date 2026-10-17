@@ -618,4 +618,9 @@
     <string name="swipe_controls">Swipe for brightness and volume</string>
     <string name="swipe_controls_summary">In fullscreen, swipe up or down on the left side for brightness and on the right side for volume</string>
     <string name="swipe_percent">%1$d%%</string>
+    <string name="swipe_hint_brightness">Swipe up or down\nfor brightness</string>
+    <string name="swipe_hint_minimize">Drag down\nto minimize</string>
+    <string name="swipe_hint_volume">Swipe up or down\nfor volume</string>
+    <string name="player_channel_open">Channel</string>
+    <string name="player_recent_videos">Recent videos</string>
 </resources>
