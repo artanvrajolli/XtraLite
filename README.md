@@ -21,6 +21,7 @@ XtraLite is a lightweight Twitch player and browser for Android, based on [Xtra]
 - **Cast to TV** with Google Cast (Chromecast, Android TV, Google TV). Use the cast button in the player controls; it can be hidden under Settings → Player buttons. Requires Google Play services and the phone on the same Wi-Fi as the TV.
   - Twitch doesn't let Cast receivers load its playlists directly, so XtraLite relays them from the phone over your local network (only H.264 qualities are offered to the TV). Live video segments go straight from Twitch to the TV; past broadcasts are relayed through the phone, so keep XtraLite running while casting them.
   - While casting: full-screen remote (opens automatically), a "now casting" bar above the navigation bar, and media controls in the notification shade, quick settings and lock screen. Open another stream or video to send it to the TV instead, or use "Switch TV" in the remote to move the current video to another TV.
+  - Progress of past broadcasts watched on the TV is saved, so opening them on the phone resumes where the TV left off. When casting stops, XtraLite offers to continue the video on the phone from the same point.
 - **21 app icons** (Lite plus 20 unique designs) under Settings → Theme → App icon.
 
 XtraLite installs as a separate app (`com.github.artanvrajolli.xtralite`) and can live next to Xtra.

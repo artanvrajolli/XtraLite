@@ -67,11 +67,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconRetroTv"
+            android:name=".LauncherIconMic"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_retro_tv"
-            android:roundIcon="@mipmap/ic_launcher_retro_tv"
+            android:icon="@mipmap/ic_launcher_mic"
+            android:roundIcon="@mipmap/ic_launcher_mic"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -79,11 +79,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconBolt"
+            android:name=".LauncherIconJoystick"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_bolt"
-            android:roundIcon="@mipmap/ic_launcher_bolt"
+            android:icon="@mipmap/ic_launcher_joystick"
+            android:roundIcon="@mipmap/ic_launcher_joystick"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -91,11 +91,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconStar"
+            android:name=".LauncherIconPopcorn"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_star"
-            android:roundIcon="@mipmap/ic_launcher_star"
+            android:icon="@mipmap/ic_launcher_popcorn"
+            android:roundIcon="@mipmap/ic_launcher_popcorn"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -103,11 +103,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconLeaf"
+            android:name=".LauncherIconTrophy"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_leaf"
-            android:roundIcon="@mipmap/ic_launcher_leaf"
+            android:icon="@mipmap/ic_launcher_trophy"
+            android:roundIcon="@mipmap/ic_launcher_trophy"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -115,11 +115,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconRocket"
+            android:name=".LauncherIconCamera"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_rocket"
-            android:roundIcon="@mipmap/ic_launcher_rocket"
+            android:icon="@mipmap/ic_launcher_camera"
+            android:roundIcon="@mipmap/ic_launcher_camera"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -127,11 +127,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconInvader"
+            android:name=".LauncherIconSatellite"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_invader"
-            android:roundIcon="@mipmap/ic_launcher_invader"
+            android:icon="@mipmap/ic_launcher_satellite"
+            android:roundIcon="@mipmap/ic_launcher_satellite"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -139,11 +139,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconHeadphones"
+            android:name=".LauncherIconMusic"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_headphones"
-            android:roundIcon="@mipmap/ic_launcher_headphones"
+            android:icon="@mipmap/ic_launcher_music"
+            android:roundIcon="@mipmap/ic_launcher_music"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -151,11 +151,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconBroadcast"
+            android:name=".LauncherIconStorm"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_broadcast"
-            android:roundIcon="@mipmap/ic_launcher_broadcast"
+            android:icon="@mipmap/ic_launcher_storm"
+            android:roundIcon="@mipmap/ic_launcher_storm"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -163,11 +163,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconDiamond"
+            android:name=".LauncherIconMountain"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_diamond"
-            android:roundIcon="@mipmap/ic_launcher_diamond"
+            android:icon="@mipmap/ic_launcher_mountain"
+            android:roundIcon="@mipmap/ic_launcher_mountain"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -175,11 +175,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconMoon"
+            android:name=".LauncherIconFox"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_moon"
-            android:roundIcon="@mipmap/ic_launcher_moon"
+            android:icon="@mipmap/ic_launcher_fox"
+            android:roundIcon="@mipmap/ic_launcher_fox"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -187,11 +187,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconSun"
+            android:name=".LauncherIconOwl"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_sun"
-            android:roundIcon="@mipmap/ic_launcher_sun"
+            android:icon="@mipmap/ic_launcher_owl"
+            android:roundIcon="@mipmap/ic_launcher_owl"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -199,11 +199,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconWave"
+            android:name=".LauncherIconPizza"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_wave"
-            android:roundIcon="@mipmap/ic_launcher_wave"
+            android:icon="@mipmap/ic_launcher_pizza"
+            android:roundIcon="@mipmap/ic_launcher_pizza"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -211,11 +211,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconFlame"
+            android:name=".LauncherIconCoffee"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_flame"
-            android:roundIcon="@mipmap/ic_launcher_flame"
+            android:icon="@mipmap/ic_launcher_coffee"
+            android:roundIcon="@mipmap/ic_launcher_coffee"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -223,11 +223,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconCrown"
+            android:name=".LauncherIconRobot"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_crown"
-            android:roundIcon="@mipmap/ic_launcher_crown"
+            android:icon="@mipmap/ic_launcher_robot"
+            android:roundIcon="@mipmap/ic_launcher_robot"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -235,11 +235,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconGhost"
+            android:name=".LauncherIconAlien"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_ghost"
-            android:roundIcon="@mipmap/ic_launcher_ghost"
+            android:icon="@mipmap/ic_launcher_alien"
+            android:roundIcon="@mipmap/ic_launcher_alien"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -247,11 +247,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconCat"
+            android:name=".LauncherIconSkull"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_cat"
-            android:roundIcon="@mipmap/ic_launcher_cat"
+            android:icon="@mipmap/ic_launcher_skull"
+            android:roundIcon="@mipmap/ic_launcher_skull"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -259,11 +259,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconHeart"
+            android:name=".LauncherIconShield"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_heart"
-            android:roundIcon="@mipmap/ic_launcher_heart"
+            android:icon="@mipmap/ic_launcher_shield"
+            android:roundIcon="@mipmap/ic_launcher_shield"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -271,11 +271,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconClapper"
+            android:name=".LauncherIconTarget"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_clapper"
-            android:roundIcon="@mipmap/ic_launcher_clapper"
+            android:icon="@mipmap/ic_launcher_target"
+            android:roundIcon="@mipmap/ic_launcher_target"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -283,11 +283,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconGamepad"
+            android:name=".LauncherIconInfinity"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_gamepad"
-            android:roundIcon="@mipmap/ic_launcher_gamepad"
+            android:icon="@mipmap/ic_launcher_infinity"
+            android:roundIcon="@mipmap/ic_launcher_infinity"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -295,11 +295,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconPlanet"
+            android:name=".LauncherIconTicket"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_planet"
-            android:roundIcon="@mipmap/ic_launcher_planet"
+            android:icon="@mipmap/ic_launcher_ticket"
+            android:roundIcon="@mipmap/ic_launcher_ticket"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

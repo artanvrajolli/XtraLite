@@ -105,6 +105,7 @@ import com.google.android.gms.cast.framework.media.uicontroller.UIMediaControlle
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.material.color.MaterialColors
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.chromium.net.CronetProvider
@@ -644,6 +645,53 @@ class MainActivity : AppCompatActivity() {
         restorePlayerFragment()
     }
 
+    override fun onStart() {
+        super.onStart()
+        CastManager.setHandoffListener { showCastHandoff(it) }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        CastManager.setHandoffListener(null)
+    }
+
+    /** Offers to continue on this device what was playing on the TV when casting stopped. */
+    private fun showCastHandoff(handoff: CastManager.Handoff) {
+        val title = handoff.string("title") ?: handoff.string("channelName") ?: return
+        Snackbar.make(binding.root, getString(R.string.cast_continue_here, title), 10_000).apply {
+            if (binding.navBarContainer.isVisible) {
+                anchorView = binding.navBarContainer
+            }
+            setAction(R.string.cast_play_here) {
+                when (handoff.type) {
+                    CastManager.TYPE_STREAM -> startStream(Stream(
+                        channelId = handoff.string("channelId"),
+                        channelLogin = handoff.string("channelLogin"),
+                        channelName = handoff.string("channelName"),
+                        title = handoff.string("title"),
+                        thumbnailURL = handoff.string("thumbnail"),
+                    ))
+                    CastManager.TYPE_VIDEO -> startVideo(Video(
+                        id = handoff.string("videoId"),
+                        channelId = handoff.string("channelId"),
+                        channelLogin = handoff.string("channelLogin"),
+                        channelName = handoff.string("channelName"),
+                        title = handoff.string("title"),
+                        thumbnailURL = handoff.string("thumbnail"),
+                    ), handoff.positionMs, true)
+                    CastManager.TYPE_CLIP -> startClip(Clip(
+                        id = handoff.string("clipId"),
+                        channelId = handoff.string("channelId"),
+                        channelLogin = handoff.string("channelLogin"),
+                        channelName = handoff.string("channelName"),
+                        title = handoff.string("title"),
+                        thumbnailURL = handoff.string("thumbnail"),
+                    ))
+                }
+            }
+        }.show()
+    }
+
     private fun castMedia(resolve: suspend () -> CastManager.CastMedia?) {
         Toast.makeText(this, R.string.cast_sending, Toast.LENGTH_SHORT).show()
         lifecycleScope.launch {
@@ -663,7 +711,7 @@ class MainActivity : AppCompatActivity() {
                 CastContext.getSharedInstance(this, ContextCompat.getMainExecutor(this)).addOnSuccessListener { castContext ->
                     if (!isDestroyed) {
                         try {
-                            CastManager.init(castContext)
+                            CastManager.init(this, castContext)
                             bindCastMiniController()
                         } catch (e: Exception) {
                             Log.e("MainActivity", "Cast setup failed", e)
@@ -946,7 +994,7 @@ class MainActivity : AppCompatActivity() {
             val channelLogin = stream.channelLogin ?: return
             castMedia {
                 CastManager.getStreamUrl(this, channelLogin)?.let {
-                    CastManager.CastMedia(it, true, stream.title, stream.channelName, stream.thumbnail)
+                    CastManager.CastMedia(it, CastManager.TYPE_STREAM, stream.title, stream.channelName, stream.thumbnail, channelId = stream.channelId, channelLogin = stream.channelLogin)
                 }
             }
             return
@@ -982,7 +1030,7 @@ class MainActivity : AppCompatActivity() {
                     val position = offset ?: if (!ignoreSavedPosition && prefs.getBoolean(C.PLAYER_USE_VIDEO_POSITIONS, true)) {
                         videoId.toLongOrNull()?.let { id -> (application as XtraApp).xtraModule.playerRepository.getVideoPosition(id)?.position }
                     } else null
-                    CastManager.CastMedia(it, false, video.title, video.channelName, video.thumbnail, position)
+                    CastManager.CastMedia(it, CastManager.TYPE_VIDEO, video.title, video.channelName, video.thumbnail, position, video.channelId, video.channelLogin, videoId = videoId)
                 }
             }
             return
@@ -1024,7 +1072,7 @@ class MainActivity : AppCompatActivity() {
             val clipId = clip.id
             castMedia {
                 CastManager.getClipUrl(this, clipId)?.let {
-                    CastManager.CastMedia(it, false, clip.title, clip.channelName, clip.thumbnail)
+                    CastManager.CastMedia(it, CastManager.TYPE_CLIP, clip.title, clip.channelName, clip.thumbnail, channelId = clip.channelId, channelLogin = clip.channelLogin, clipId = clipId)
                 }
             }
             return

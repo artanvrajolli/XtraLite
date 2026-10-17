@@ -10,6 +10,7 @@ import androidx.mediarouter.app.MediaRouteChooserDialog
 import androidx.mediarouter.media.MediaRouter
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
+import com.github.andreyasadchy.xtra.model.VideoPosition
 import com.github.andreyasadchy.xtra.ui.player.ExpandedControlsActivity
 import com.google.android.gms.cast.HlsSegmentFormat
 import com.google.android.gms.cast.HlsVideoSegmentFormat
@@ -19,11 +20,16 @@ import com.google.android.gms.cast.MediaMetadata
 import com.google.android.gms.cast.framework.CastContext
 import com.google.android.gms.cast.framework.CastSession
 import com.google.android.gms.cast.framework.SessionManagerListener
+import com.google.android.gms.cast.framework.media.RemoteMediaClient
 import com.google.android.gms.common.images.WebImage
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
+import org.json.JSONObject
 
 /**
  * App-wide cast session handling: stops the local relay when casting ends and moves the current
@@ -31,15 +37,57 @@ import java.util.concurrent.TimeUnit
  */
 object CastManager {
 
-    /** Something to play on the TV. [sourceUrl] is a Twitch HLS playlist or an MP4 file. */
+    const val TYPE_STREAM = "stream"
+    const val TYPE_VIDEO = "video"
+    const val TYPE_CLIP = "clip"
+
+    /**
+     * Something to play on the TV. [sourceUrl] is a Twitch HLS playlist or an MP4 file. The rest
+     * identifies the content; it travels with the cast session so progress can be saved and the
+     * video continued on this device after casting.
+     */
     class CastMedia(
         val sourceUrl: String,
-        val isLive: Boolean,
+        val type: String,
         val title: String?,
-        val subtitle: String?,
+        val channelName: String?,
         val thumbnail: String?,
         val positionMs: Long? = null,
-    )
+        val channelId: String? = null,
+        val channelLogin: String? = null,
+        val videoId: String? = null,
+        val clipId: String? = null,
+    ) {
+        val isLive: Boolean
+            get() = type == TYPE_STREAM
+
+        fun toJson(): JSONObject = JSONObject().apply {
+            put("type", type)
+            putOpt("title", title)
+            putOpt("channelName", channelName)
+            putOpt("thumbnail", thumbnail)
+            putOpt("channelId", channelId)
+            putOpt("channelLogin", channelLogin)
+            putOpt("videoId", videoId)
+            putOpt("clipId", clipId)
+        }
+    }
+
+    /** What was playing on the TV when casting stopped, to continue it on this device. */
+    class Handoff(val data: JSONObject, val positionMs: Long, val time: Long) {
+        val type: String get() = data.optString("type")
+        fun string(name: String): String? = data.optString(name).takeIf { it.isNotEmpty() }
+    }
+
+    private var appContext: Context? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var handoff: Handoff? = null
+    private var handoffListener: ((Handoff) -> Unit)? = null
+
+    // saves the position of past broadcasts while they play on the TV
+    private val progressListener = RemoteMediaClient.ProgressListener { progressMs, _ ->
+        castContext?.sessionManager?.currentCastSession?.remoteMediaClient?.mediaInfo?.customData?.let { saveProgress(it, progressMs) }
+    }
 
     private var castContext: CastContext? = null
     private var pendingLoad: MediaLoadRequestData? = null
@@ -50,6 +98,7 @@ object CastManager {
 
     private val sessionListener = object : SessionManagerListener<CastSession> {
         override fun onSessionStarted(session: CastSession, sessionId: String) {
+            session.remoteMediaClient?.addProgressListener(progressListener, 10_000)
             pendingLoad?.let { session.remoteMediaClient?.load(it) }
             pendingLoad = null
             isSwitching = false
@@ -61,24 +110,73 @@ object CastManager {
             CastProxyServer.stop()
         }
 
-        override fun onSessionEnded(session: CastSession, error: Int) {
-            if (!isSwitching) {
-                CastProxyServer.stop()
+        override fun onSessionEnding(session: CastSession) {
+            val client = session.remoteMediaClient ?: return
+            client.removeProgressListener(progressListener)
+            val data = client.mediaInfo?.customData
+            if (data != null && !isSwitching) {
+                val position = client.approximateStreamPosition
+                saveProgress(data, position)
+                handoff = Handoff(data, position, System.currentTimeMillis())
             }
         }
 
+        override fun onSessionEnded(session: CastSession, error: Int) {
+            if (!isSwitching) {
+                CastProxyServer.stop()
+                handoff?.let { handoff ->
+                    handoffListener?.let {
+                        this@CastManager.handoff = null
+                        it(handoff)
+                    }
+                }
+            }
+        }
+
+        override fun onSessionResumed(session: CastSession, wasSuspended: Boolean) {
+            session.remoteMediaClient?.addProgressListener(progressListener, 10_000)
+        }
+
         override fun onSessionStarting(session: CastSession) {}
-        override fun onSessionEnding(session: CastSession) {}
         override fun onSessionResuming(session: CastSession, sessionId: String) {}
-        override fun onSessionResumed(session: CastSession, wasSuspended: Boolean) {}
         override fun onSessionResumeFailed(session: CastSession, error: Int) {}
         override fun onSessionSuspended(session: CastSession, reason: Int) {}
     }
 
-    fun init(castContext: CastContext) {
+    fun init(context: Context, castContext: CastContext) {
         if (this.castContext == null) {
             this.castContext = castContext
+            appContext = context.applicationContext
             castContext.sessionManager.addSessionManagerListener(sessionListener, CastSession::class.java)
+            // a session restored after the app restarted
+            castContext.sessionManager.currentCastSession?.remoteMediaClient?.addProgressListener(progressListener, 10_000)
+        }
+    }
+
+    /**
+     * [listener] is called when casting stops so the video can be continued here. A stop that
+     * happened while nothing was listening (app in background) is delivered when one is set,
+     * if it was less than 10 minutes ago.
+     */
+    fun setHandoffListener(listener: ((Handoff) -> Unit)?) {
+        handoffListener = listener
+        if (listener != null) {
+            handoff?.let {
+                handoff = null
+                if (System.currentTimeMillis() - it.time < 10 * 60 * 1000) {
+                    listener(it)
+                }
+            }
+        }
+    }
+
+    private fun saveProgress(data: JSONObject, positionMs: Long) {
+        val context = appContext ?: return
+        val videoId = data.optString("videoId").toLongOrNull()
+        if (data.optString("type") == TYPE_VIDEO && videoId != null && positionMs > 0 && context.prefs().getBoolean(C.PLAYER_USE_VIDEO_POSITIONS, true)) {
+            scope.launch {
+                (context as XtraApp).xtraModule.playerRepository.saveVideoPosition(VideoPosition(videoId, positionMs))
+            }
         }
     }
 
@@ -144,8 +242,8 @@ object CastManager {
             return
         }
         val metadata = MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE).apply {
-            (media.title?.takeIf { it.isNotBlank() } ?: media.subtitle)?.let { putString(MediaMetadata.KEY_TITLE, it) }
-            media.subtitle?.let { putString(MediaMetadata.KEY_SUBTITLE, it) }
+            (media.title?.takeIf { it.isNotBlank() } ?: media.channelName)?.let { putString(MediaMetadata.KEY_TITLE, it) }
+            media.channelName?.let { putString(MediaMetadata.KEY_SUBTITLE, it) }
             media.thumbnail?.takeIf { it.startsWith("http") }?.let {
                 val thumbnail = it.replace(Regex("%?\\{width\\}"), "1280").replace(Regex("%?\\{height\\}"), "720")
                 addImage(WebImage(thumbnail.toUri()))
@@ -155,6 +253,7 @@ object CastManager {
             setContentUrl(url)
             setStreamType(if (media.isLive) MediaInfo.STREAM_TYPE_LIVE else MediaInfo.STREAM_TYPE_BUFFERED)
             setMetadata(metadata)
+            setCustomData(media.toJson())
             if (isHls) {
                 setContentType(MimeTypes.APPLICATION_M3U8)
                 // the relay only offers H.264 variants, which Twitch serves as MPEG-TS

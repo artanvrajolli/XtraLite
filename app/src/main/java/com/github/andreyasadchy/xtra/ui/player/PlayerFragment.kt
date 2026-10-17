@@ -1022,7 +1022,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
         CastContext.getSharedInstance(requireContext(), ContextCompat.getMainExecutor(requireContext())).addOnSuccessListener { castContext ->
             if (view != null) {
                 this.castContext = castContext
-                CastManager.init(castContext)
+                CastManager.init(requireContext(), castContext)
                 CastButtonFactory.setUpMediaRouteButton(requireContext(), binding.playerControls.cast)
                 binding.playerControls.cast.visibility = View.VISIBLE
                 castContext.sessionManager.removeSessionManagerListener(castSessionListener, CastSession::class.java)
@@ -1050,11 +1050,19 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
             requireActivity(),
             CastManager.CastMedia(
                 sourceUrl = sourceUrl,
-                isLive = playbackService?.type == BasePlaybackService.STREAM,
+                type = when (playbackService?.type) {
+                    BasePlaybackService.STREAM -> CastManager.TYPE_STREAM
+                    BasePlaybackService.CLIP -> CastManager.TYPE_CLIP
+                    else -> CastManager.TYPE_VIDEO
+                },
                 title = playbackService?.title,
-                subtitle = playbackService?.channelName,
+                channelName = playbackService?.channelName,
                 thumbnail = playbackService?.thumbnail,
                 positionMs = getCurrentPosition(),
+                channelId = playbackService?.channelId,
+                channelLogin = playbackService?.channelLogin,
+                videoId = playbackService?.videoId.takeIf { playbackService?.type == BasePlaybackService.VIDEO },
+                clipId = playbackService?.clipId,
             )
         ) { success ->
             if (success && view != null) {
