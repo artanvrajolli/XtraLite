@@ -1,8 +1,21 @@
-<i>Xtra for Twitch</i> is a <a href='https://en.wikipedia.org/wiki/Twitch_(service)' target='_blank'>Twitch</a> client focused on providing the best viewing and chatting experience on mobile devices:
+<i>Xtra Lite</i> is a lightweight Twitch player and browser, based on <a href="https://github.com/crackededed/Xtra">Xtra</a>. It keeps the player, browsing and downloads, and removes chat.
 
-* Support for popular emotes with BetterTTV and FrankerFaceZ plugins
-* Watch VODs and clips with chat replay
-* Download VODs to watch offline
-* Continue watching outside of the app with Picture-in-Picture mode
-* Sleep timer to stop the stream automatically
-* Customizable interface with 3 different color themes
+<b>Differences from Xtra</b>
+
+* <b>No chat.</b> Live chat, chat replay, chat downloads, emotes and chat settings are removed. Login only requests the user:read:follows scope.
+* <b>Skip silence</b> for videos, clips and downloads, as in Twire. Toggle it from the player menu.
+* <b>Swipe for brightness and volume</b> in fullscreen: left third for brightness, right third for volume. Can be turned off in Settings → Player.
+* <b>Channel panel</b> below the video in portrait, with the streamer's profile and recent videos.
+* <b>Lower data use:</b> audio-only playback in the background, 480p default and a 25 s buffer on mobile data, smaller thumbnails, tabs that load only when opened.
+* <b>Cast to TV</b> with Google Cast (needs Google Play services and the same Wi-Fi as the TV). Media controls in the notification, and progress of past broadcasts is saved for resuming on the phone.
+* <b>5 app icons</b> under Settings → Theme → App icon.
+
+<b>Kept from Xtra</b>
+
+* Watch live streams, past broadcasts and clips
+* Download videos and clips to watch offline
+* Picture-in-picture and background audio
+* Sleep timer
+* Follow channels and games without logging in
+
+Xtra Lite installs as a separate app and can be installed next to Xtra.

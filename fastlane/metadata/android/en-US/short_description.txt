@@ -1,1 +1,1 @@
-Third-party Twitch client
+Lightweight Twitch player without chat, with skip silence and Cast to TV

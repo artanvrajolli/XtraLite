@@ -1,0 +1,4 @@
+* Channel panel below the video in portrait: streamer profile and recent videos
+* Tap the video to pause or resume while the controls are showing
+* Swipe gesture hint the first time fullscreen opens
+* Volume button uses the same icon as the volume gesture
