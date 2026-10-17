@@ -3,6 +3,14 @@
 
     <SwitchPreferenceCompat
         android:defaultValue="true"
+        android:key="player_swipe_controls"
+        android:summary="@string/swipe_controls_summary"
+        android:title="@string/swipe_controls"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
         android:key="player_disable_background_video"
         android:title="@string/disable_background_video"
         app:iconSpaceReserved="false"

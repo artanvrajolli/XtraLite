@@ -147,6 +147,7 @@ object C {
     const val PLAYER_VOLUME = "player_volume"
     const val PLAYER_SPEED = "player_speed"
     const val PLAYER_SKIP_SILENCE = "player_skip_silence"
+    const val PLAYER_SWIPE_CONTROLS = "player_swipe_controls"
     const val PLAYER_SPEED_LIST = "player_speed_list"
     const val PLAYER_AUDIO_COMPRESSOR = "player_audio_compressor"
     const val PLAYER_SUBTITLES_ENABLED = "player_subtitles_enabled"

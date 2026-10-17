@@ -437,7 +437,7 @@ class SettingsActivity : AppCompatActivity() {
             findPreference<Preference>("check_updates")?.setOnPreferenceClickListener {
                 viewModel.checkUpdates(
                     requireContext().prefs().getString(C.NETWORK_LIBRARY, C.OKHTTP),
-                    requireContext().prefs().getString(C.UPDATE_URL, null) ?: "https://api.github.com/repos/artanvrajolli/XtraLite/releases/tags/latest",
+                    requireContext().prefs().getString(C.UPDATE_URL, null) ?: "https://api.github.com/repos/artanvrajolli/XtraLite/releases/latest",
                     requireContext().tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0)
                 )
                 true

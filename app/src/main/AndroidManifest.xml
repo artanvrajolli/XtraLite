@@ -67,11 +67,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconMic"
+            android:name=".LauncherIconClassic"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_mic"
-            android:roundIcon="@mipmap/ic_launcher_mic"
+            android:icon="@mipmap/ic_launcher_classic"
+            android:roundIcon="@mipmap/ic_launcher_classic"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -79,11 +79,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconJoystick"
+            android:name=".LauncherIconPurple"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_joystick"
-            android:roundIcon="@mipmap/ic_launcher_joystick"
+            android:icon="@mipmap/ic_launcher_purple"
+            android:roundIcon="@mipmap/ic_launcher_purple"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -91,11 +91,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconPopcorn"
+            android:name=".LauncherIconAmoled"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_popcorn"
-            android:roundIcon="@mipmap/ic_launcher_popcorn"
+            android:icon="@mipmap/ic_launcher_amoled"
+            android:roundIcon="@mipmap/ic_launcher_amoled"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -103,203 +103,11 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIconTrophy"
+            android:name=".LauncherIconMinimal"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_trophy"
-            android:roundIcon="@mipmap/ic_launcher_trophy"
-            android:targetActivity=".ui.main.MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherIconCamera"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_camera"
-            android:roundIcon="@mipmap/ic_launcher_camera"
-            android:targetActivity=".ui.main.MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherIconSatellite"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_satellite"
-            android:roundIcon="@mipmap/ic_launcher_satellite"
-            android:targetActivity=".ui.main.MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherIconMusic"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_music"
-            android:roundIcon="@mipmap/ic_launcher_music"
-            android:targetActivity=".ui.main.MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherIconStorm"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_storm"
-            android:roundIcon="@mipmap/ic_launcher_storm"
-            android:targetActivity=".ui.main.MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherIconMountain"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_mountain"
-            android:roundIcon="@mipmap/ic_launcher_mountain"
-            android:targetActivity=".ui.main.MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherIconFox"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_fox"
-            android:roundIcon="@mipmap/ic_launcher_fox"
-            android:targetActivity=".ui.main.MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherIconOwl"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_owl"
-            android:roundIcon="@mipmap/ic_launcher_owl"
-            android:targetActivity=".ui.main.MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherIconPizza"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_pizza"
-            android:roundIcon="@mipmap/ic_launcher_pizza"
-            android:targetActivity=".ui.main.MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherIconCoffee"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_coffee"
-            android:roundIcon="@mipmap/ic_launcher_coffee"
-            android:targetActivity=".ui.main.MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherIconRobot"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_robot"
-            android:roundIcon="@mipmap/ic_launcher_robot"
-            android:targetActivity=".ui.main.MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherIconAlien"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_alien"
-            android:roundIcon="@mipmap/ic_launcher_alien"
-            android:targetActivity=".ui.main.MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherIconSkull"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_skull"
-            android:roundIcon="@mipmap/ic_launcher_skull"
-            android:targetActivity=".ui.main.MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherIconShield"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_shield"
-            android:roundIcon="@mipmap/ic_launcher_shield"
-            android:targetActivity=".ui.main.MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherIconTarget"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_target"
-            android:roundIcon="@mipmap/ic_launcher_target"
-            android:targetActivity=".ui.main.MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherIconInfinity"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_infinity"
-            android:roundIcon="@mipmap/ic_launcher_infinity"
-            android:targetActivity=".ui.main.MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherIconTicket"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_ticket"
-            android:roundIcon="@mipmap/ic_launcher_ticket"
+            android:icon="@mipmap/ic_launcher_minimal"
+            android:roundIcon="@mipmap/ic_launcher_minimal"
             android:targetActivity=".ui.main.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

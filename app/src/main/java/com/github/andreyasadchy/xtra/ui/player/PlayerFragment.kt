@@ -13,9 +13,11 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.Icon
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
+import android.provider.Settings
 import android.text.format.DateFormat
 import android.text.format.DateUtils
 import android.util.TypedValue
@@ -29,6 +31,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.view.ViewPropertyAnimator
+import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.Toast
@@ -84,6 +87,8 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -122,6 +127,11 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
     private var controllerIsAnimating = false
     private var controllerAnimation: ViewPropertyAnimator? = null
     private var backgroundColor: Int? = null
+    private var swipeMode = SWIPE_NONE
+    private var swipeStartX = 0f
+    private var swipeStartY = 0f
+    private var swipeStartValue = 0f
+    private val hideSwipeOverlay = Runnable { _binding?.swipeOverlay?.visibility = View.GONE }
     private var backgroundVisible = false
 
     private var castContext: CastContext? = null
@@ -266,6 +276,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
             val touchSlopRange = -touchSlop.toFloat()..touchSlop.toFloat()
             val longPressTimeout = ViewConfiguration.getLongPressTimeout()
             val moveFreely = requireContext().prefs().getBoolean(C.PLAYER_MOVE_FREELY, false)
+            val swipeControls = requireContext().prefs().getBoolean(C.PLAYER_SWIPE_CONTROLS, true)
             val controllerTapDetector = GestureDetector(
                 requireContext(),
                 object : GestureDetector.SimpleOnGestureListener() {
@@ -439,6 +450,9 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                             lastX = x * slidingLayout.scaleX
                             lastY = y * slidingLayout.scaleY
                             statusBarSwipe = !isPortrait && y <= 100
+                            swipeMode = SWIPE_NONE
+                            swipeStartX = x
+                            swipeStartY = y
                             downAction(event)
                         }
                         MotionEvent.ACTION_POINTER_DOWN -> {
@@ -457,7 +471,25 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                             }
                         }
                         MotionEvent.ACTION_MOVE -> {
-                            if (isMaximized) {
+                            // fullscreen: left third = brightness, right third = volume, middle keeps drag to minimize
+                            val sideZone = swipeControls && isMaximized && !isPortrait && !statusBarSwipe && !playerControls.progressBar.isPressed &&
+                                    (swipeStartX < playerLayout.width / 3f || swipeStartX > playerLayout.width * 2 / 3f)
+                            if (sideZone) {
+                                if (swipeMode == SWIPE_NONE) {
+                                    val dx = event.x - swipeStartX
+                                    val dy = event.y - swipeStartY
+                                    if (abs(dy) > touchSlop && abs(dy) > abs(dx)) {
+                                        startSwipe(if (swipeStartX < playerLayout.width / 2f) SWIPE_BRIGHTNESS else SWIPE_VOLUME, event.y)
+                                        // the touch is a swipe now, not a tap on the controls
+                                        playerControls.root.dispatchTouchEvent(MotionEvent.obtain(event).apply { action = MotionEvent.ACTION_CANCEL })
+                                    } else {
+                                        playerControls.root.dispatchTouchEvent(event)
+                                    }
+                                }
+                                if (swipeMode != SWIPE_NONE) {
+                                    updateSwipe(event.y)
+                                }
+                            } else if (isMaximized) {
                                 playerControls.root.dispatchTouchEvent(event)
                                 if (!playerControls.progressBar.isPressed && !statusBarSwipe && activePointerId != -1) {
                                     val pointerIndex = event.findPointerIndex(activePointerId)
@@ -537,7 +569,15 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                                 activePointerId = newId
                             }
                         }
-                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> upAction(event)
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                            if (swipeMode != SWIPE_NONE) {
+                                swipeMode = SWIPE_NONE
+                                binding.swipeOverlay.removeCallbacks(hideSwipeOverlay)
+                                binding.swipeOverlay.postDelayed(hideSwipeOverlay, 600)
+                            } else {
+                                upAction(event)
+                            }
+                        }
                     }
                 }
                 true
@@ -1190,6 +1230,52 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
         }
     }
 
+    private fun startSwipe(mode: Int, y: Float) {
+        swipeMode = mode
+        swipeStartY = y
+        swipeStartValue = if (mode == SWIPE_BRIGHTNESS) {
+            requireActivity().window.attributes.screenBrightness.takeIf { it >= 0f }
+                ?: (Settings.System.getInt(requireContext().contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128) / 255f)
+        } else {
+            val audioManager = requireContext().getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        }
+    }
+
+    private fun updateSwipe(y: Float) {
+        // dragging over 80% of the player height goes from 0 to 100%
+        val value = (swipeStartValue + (swipeStartY - y) / (binding.playerLayout.height * 0.8f)).coerceIn(0f, 1f)
+        val icon = if (swipeMode == SWIPE_BRIGHTNESS) {
+            requireActivity().window.attributes = requireActivity().window.attributes.apply {
+                screenBrightness = value.coerceAtLeast(0.01f)
+            }
+            R.drawable.baseline_brightness_medium_24
+        } else {
+            val audioManager = requireContext().getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (value * audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)).roundToInt(), 0)
+            if (value > 0f) R.drawable.baseline_volume_up_24 else R.drawable.baseline_volume_off_24
+        }
+        with(binding) {
+            swipeOverlay.removeCallbacks(hideSwipeOverlay)
+            swipeOverlay.visibility = View.VISIBLE
+            swipeIcon.setImageResource(icon)
+            val percent = (value * 100).roundToInt()
+            swipeProgress.progress = percent
+            swipeValue.text = getString(R.string.swipe_percent, percent)
+        }
+    }
+
+    /** Gives brightness back to the system after leaving fullscreen. */
+    private fun resetBrightness() {
+        activity?.window?.let { window ->
+            if (window.attributes.screenBrightness >= 0f) {
+                window.attributes = window.attributes.apply {
+                    screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                }
+            }
+        }
+    }
+
     fun setResizeMode() {
         resizeMode = (resizeMode + 1).let { if (it < 5) it else 0 }
         binding.aspectRatioFrameLayout.resizeMode = resizeMode
@@ -1754,6 +1840,9 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
         super.onConfigurationChanged(newConfig)
         with(binding) {
             isPortrait = newConfig.orientation == Configuration.ORIENTATION_PORTRAIT
+            if (isPortrait) {
+                resetBrightness()
+            }
             if (isMaximized) {
                 enableBackground()
             } else {
@@ -1801,6 +1890,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
     }
 
     fun minimize() {
+        resetBrightness()
         with(binding) {
             isMaximized = false
             backPressedCallback.remove()
@@ -2143,6 +2233,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
 
     override fun onDestroyView() {
         super.onDestroyView()
+        resetBrightness()
         castContext?.sessionManager?.removeSessionManagerListener(castSessionListener, CastSession::class.java)
         castContext = null
         _binding = null
@@ -2150,6 +2241,9 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
 
     companion object {
         private const val REQUEST_CODE_QUALITY = 0
+        private const val SWIPE_NONE = 0
+        private const val SWIPE_BRIGHTNESS = 1
+        private const val SWIPE_VOLUME = 2
         private const val REQUEST_CODE_SPEED = 1
         private const val REQUEST_CODE_AUDIO_ONLY = 2
         private const val REQUEST_CODE_PLAY_PAUSE = 3

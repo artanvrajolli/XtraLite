@@ -20,26 +20,10 @@ object AppIcons {
 
     val icons = listOf(
         AppIcon("lite", R.string.app_icon_lite, R.mipmap.ic_launcher),
-        AppIcon("mic", R.string.app_icon_mic, R.mipmap.ic_launcher_mic),
-        AppIcon("joystick", R.string.app_icon_joystick, R.mipmap.ic_launcher_joystick),
-        AppIcon("popcorn", R.string.app_icon_popcorn, R.mipmap.ic_launcher_popcorn),
-        AppIcon("trophy", R.string.app_icon_trophy, R.mipmap.ic_launcher_trophy),
-        AppIcon("camera", R.string.app_icon_camera, R.mipmap.ic_launcher_camera),
-        AppIcon("satellite", R.string.app_icon_satellite, R.mipmap.ic_launcher_satellite),
-        AppIcon("music", R.string.app_icon_music, R.mipmap.ic_launcher_music),
-        AppIcon("storm", R.string.app_icon_storm, R.mipmap.ic_launcher_storm),
-        AppIcon("mountain", R.string.app_icon_mountain, R.mipmap.ic_launcher_mountain),
-        AppIcon("fox", R.string.app_icon_fox, R.mipmap.ic_launcher_fox),
-        AppIcon("owl", R.string.app_icon_owl, R.mipmap.ic_launcher_owl),
-        AppIcon("pizza", R.string.app_icon_pizza, R.mipmap.ic_launcher_pizza),
-        AppIcon("coffee", R.string.app_icon_coffee, R.mipmap.ic_launcher_coffee),
-        AppIcon("robot", R.string.app_icon_robot, R.mipmap.ic_launcher_robot),
-        AppIcon("alien", R.string.app_icon_alien, R.mipmap.ic_launcher_alien),
-        AppIcon("skull", R.string.app_icon_skull, R.mipmap.ic_launcher_skull),
-        AppIcon("shield", R.string.app_icon_shield, R.mipmap.ic_launcher_shield),
-        AppIcon("target", R.string.app_icon_target, R.mipmap.ic_launcher_target),
-        AppIcon("infinity", R.string.app_icon_infinity, R.mipmap.ic_launcher_infinity),
-        AppIcon("ticket", R.string.app_icon_ticket, R.mipmap.ic_launcher_ticket),
+        AppIcon("classic", R.string.app_icon_classic, R.mipmap.ic_launcher_classic),
+        AppIcon("purple", R.string.app_icon_purple, R.mipmap.ic_launcher_purple),
+        AppIcon("amoled", R.string.app_icon_amoled, R.mipmap.ic_launcher_amoled),
+        AppIcon("minimal", R.string.app_icon_minimal, R.mipmap.ic_launcher_minimal),
     )
 
     fun getCurrent(context: Context): AppIcon {
