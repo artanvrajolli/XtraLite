@@ -3,6 +3,10 @@ name: Build
 on:
   push:
     branches: [ master ]
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -31,21 +35,12 @@ jobs:
         name: apk
         path: app/build/outputs/apk/release/*.apk
 
-    - name: Generate release notes
-      run: git log refs/tags/latest..HEAD --oneline --decorate=no > notes.txt
-
-    - name: Update tag
-      run: |
-        git tag -f latest
-        git push -f origin tag latest
-
-    - name: Delete release
-      continue-on-error: true
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: gh release delete latest -y
-
     - name: Create release
+      if: startsWith(github.ref, 'refs/tags/v')
       env:
         GH_TOKEN: ${{ github.token }}
-      run: gh release create latest --title "Latest" --notes-file notes.txt --latest=true 'app/build/outputs/apk/release/*.apk'
+        RELEASE_TAG: ${{ github.ref_name }}
+      run: |
+        if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          gh release create "$RELEASE_TAG" --title "Xtra Lite ${RELEASE_TAG#v}" --generate-notes --latest=true app/build/outputs/apk/release/*.apk
+        fi

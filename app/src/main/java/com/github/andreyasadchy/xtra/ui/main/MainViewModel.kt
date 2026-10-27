@@ -18,6 +18,7 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.github.andreyasadchy.xtra.BuildConfig
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.XtraApp
 import com.github.andreyasadchy.xtra.model.PlaybackState
@@ -41,10 +42,13 @@ import com.github.andreyasadchy.xtra.ui.login.LoginActivity
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.NetworkUtils
 import com.github.andreyasadchy.xtra.util.NetworkUtils.executeAsync
+import com.github.andreyasadchy.xtra.util.ReleaseUpdate
 import com.github.andreyasadchy.xtra.util.TwitchApiHelper
 import com.github.andreyasadchy.xtra.util.tokenPrefs
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -52,11 +56,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.chromium.net.CronetEngine
@@ -103,11 +102,14 @@ class MainViewModel(
     val game = MutableStateFlow<Pair<Game?, String?>?>(null)
     val tag = MutableStateFlow<Tag?>(null)
 
-    val updateUrl = MutableSharedFlow<String?>()
+    val updateUrl = MutableStateFlow<String?>(null)
+    var updateVersion: String? = null
+    var checkedUpdates = false
+    val updateDownloading = MutableStateFlow(false)
+    val updateError = MutableStateFlow(false)
     var updateSize: Long? = null
     var updateJob: Job? = null
-    val updateProgress = MutableSharedFlow<Int>()
-    val closeUpdateDialog = MutableSharedFlow<Boolean>()
+    val updateProgress = MutableStateFlow(0)
 
     fun savePlaybackState(item: PlaybackState) {
         viewModelScope.launch {
@@ -1024,7 +1026,7 @@ class MainViewModel(
         TwitchApiHelper.checkedValidation = true
     }
 
-    fun checkUpdates(networkLibrary: String?, url: String, lastChecked: Long) {
+    fun checkUpdates(networkLibrary: String?, url: String) {
         viewModelScope.launch(Dispatchers.IO) {
             updateUrl.emit(
                 try {
@@ -1069,27 +1071,25 @@ class MainViewModel(
                             }
                         }
                     }
-                    response["assets"]?.jsonArray?.find {
-                        it.jsonObject.getValue("content_type").jsonPrimitive.contentOrNull == "application/vnd.android.package-archive"
-                    }?.jsonObject?.let { obj ->
-                        obj.getValue("updated_at").jsonPrimitive.contentOrNull?.let {
-                            Instant.parseOrNull(it)?.toEpochMilliseconds()?.takeIf { ms -> ms > 0 }
-                        }?.let {
-                            if (it > lastChecked) {
-                                updateSize = obj["size"]?.jsonPrimitive?.longOrNull
-                                obj.getValue("browser_download_url").jsonPrimitive.contentOrNull
-                            } else null
-                        }
-                    }
+                    val update = ReleaseUpdate.fromRelease(response, BuildConfig.VERSION_NAME)
+                    updateSize = update?.size
+                    updateVersion = update?.version
+                    checkedUpdates = true
+                    update?.url
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     null
                 }
             )
         }
-        TwitchApiHelper.checkedUpdates = true
     }
 
     fun downloadUpdate(networkLibrary: String?, url: String) {
+        if (updateDownloading.value) return
+        updateDownloading.value = true
+        updateError.value = false
+        updateProgress.value = 0
         updateJob = viewModelScope.launch(Dispatchers.IO) {
             try {
                 val progressListener = NetworkUtils.ProgressListener { bytesRead ->
@@ -1146,31 +1146,57 @@ class MainViewModel(
                         }
                     }
                 }
-                if (response != null && response.isNotEmpty()) {
-                    val packageInstaller = applicationContext.packageManager.packageInstaller
-                    val sessionId = packageInstaller.createSession(
-                        PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
-                    )
-                    val session = packageInstaller.openSession(sessionId)
-                    session.openWrite("package", 0, response.size.toLong()).use {
-                        it.write(response)
+                check(response != null && response.isNotEmpty()) { "Empty update download" }
+                ensureActive()
+                // Inspect the APK before handing it to Android: never reinstall or downgrade.
+                val apk = File(applicationContext.cacheDir, "update.apk")
+                try {
+                    apk.writeBytes(response)
+                    @Suppress("DEPRECATION")
+                    val info = applicationContext.packageManager.getPackageArchiveInfo(apk.path, 0)
+                    check(info?.packageName == applicationContext.packageName) { "Wrong update package" }
+                    val code = if (android.os.Build.VERSION.SDK_INT >= 28) info!!.longVersionCode else {
+                        @Suppress("DEPRECATION")
+                        info!!.versionCode.toLong()
                     }
-                    session.commit(
-                        PendingIntent.getActivity(
-                            applicationContext,
-                            0,
-                            Intent(applicationContext, MainActivity::class.java).apply {
-                                setAction(MainActivity.INTENT_INSTALL_UPDATE)
-                            },
-                            PendingIntent.FLAG_MUTABLE
-                        ).intentSender
-                    )
-                    session.close()
+                    check(code > BuildConfig.VERSION_CODE) { "Update is not newer" }
+                } finally {
+                    apk.delete()
                 }
+                val installer = applicationContext.packageManager.packageInstaller
+                val sessionId = installer.createSession(
+                    PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
+                        setAppPackageName(applicationContext.packageName)
+                    }
+                )
+                try {
+                    installer.openSession(sessionId).use { session ->
+                        session.openWrite("package", 0, response.size.toLong()).use {
+                            it.write(response)
+                            session.fsync(it)
+                        }
+                        ensureActive()
+                        session.commit(
+                            PendingIntent.getActivity(
+                                applicationContext, sessionId,
+                                Intent(applicationContext, MainActivity::class.java).apply {
+                                    action = MainActivity.INTENT_INSTALL_UPDATE
+                                },
+                                PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                            ).intentSender
+                        )
+                    }
+                } catch (e: Exception) {
+                    installer.abandonSession(sessionId)
+                    throw e
+                }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-
+                updateError.value = true
+            } finally {
+                updateDownloading.value = false
             }
-            closeUpdateDialog.emit(true)
         }
     }
 

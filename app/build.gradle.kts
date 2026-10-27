@@ -27,8 +27,8 @@ android {
         applicationId = "com.github.artanvrajolli.xtralite"
         minSdk = 24
         targetSdk = 37
-        versionCode = 123
-        versionName = "2.60.8-lite.2"
+        versionCode = 125
+        versionName = "2.60.9-lite.2"
     }
 
     buildTypes {
@@ -57,6 +57,7 @@ android {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     compileOnly("com.google.j2objc:j2objc-annotations:3.0.0") // OkHttpDataSource SettableFuture
 
     implementation(libs.material)

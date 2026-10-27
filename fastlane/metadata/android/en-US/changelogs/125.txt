@@ -1,0 +1,4 @@
+* Show an Update button in the corner at startup when a newer release is available
+* Download updates in the app and open Android's installer
+* Compare release versions to avoid reinstalling the same version
+* Preserve update download progress when rotating the phone

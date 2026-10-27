@@ -618,9 +618,29 @@
     <string name="swipe_controls">Swipe for brightness and volume</string>
     <string name="swipe_controls_summary">In fullscreen, swipe up or down on the left side for brightness and on the right side for volume</string>
     <string name="swipe_percent">%1$d%%</string>
+    <string name="player_battery_overlay">Show battery in fullscreen</string>
+    <string name="player_battery_overlay_summary">Briefly show the battery percentage and charging state at the top center of the video</string>
+    <string name="player_battery_overlay_interval">Battery display interval</string>
+    <string name="player_battery_overlay_interval_message">Minutes between battery updates. Each update is shown for 5 seconds.</string>
+    <string name="player_battery_overlay_interval_invalid">Enter a whole number of minutes greater than 0</string>
+    <plurals name="player_battery_overlay_interval_summary">
+        <item quantity="one">Every %1$d minute</item>
+        <item quantity="other">Every %1$d minutes</item>
+    </plurals>
+    <string name="player_battery_status">Battery %1$d%% · %2$s</string>
+    <string name="battery_charging">Charging</string>
+    <string name="battery_full">Fully charged</string>
+    <string name="battery_not_charging">Plugged in, not charging</string>
+    <string name="battery_discharging">On battery</string>
+    <string name="battery_status_unknown">Status unknown</string>
     <string name="swipe_hint_brightness">Swipe up or down\nfor brightness</string>
     <string name="swipe_hint_minimize">Drag down\nto minimize</string>
     <string name="swipe_hint_volume">Swipe up or down\nfor volume</string>
     <string name="player_channel_open">Channel</string>
     <string name="player_recent_videos">Recent videos</string>
+    <string name="update_button">Update</string>
+    <string name="update_to_version">Update to %s</string>
+    <string name="update_startup_summary">Check for a newer release when the app starts</string>
+    <string name="update_failed">Could not update Xtra Lite. Please try again.</string>
+    <string name="update_install_permission">Allow Xtra Lite to install apps in Android settings, then tap Update again.</string>
 </resources>

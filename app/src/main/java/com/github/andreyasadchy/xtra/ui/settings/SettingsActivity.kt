@@ -437,8 +437,7 @@ class SettingsActivity : AppCompatActivity() {
             findPreference<Preference>("check_updates")?.setOnPreferenceClickListener {
                 viewModel.checkUpdates(
                     requireContext().prefs().getString(C.NETWORK_LIBRARY, C.OKHTTP),
-                    requireContext().prefs().getString(C.UPDATE_URL, null) ?: "https://api.github.com/repos/artanvrajolli/XtraLite/releases/latest",
-                    requireContext().tokenPrefs().getLong(C.UPDATE_LAST_CHECKED, 0)
+                    requireContext().prefs().getString(C.UPDATE_URL, null) ?: "https://api.github.com/repos/artanvrajolli/XtraLite/releases/latest"
                 )
                 true
             }
@@ -938,6 +937,23 @@ class SettingsActivity : AppCompatActivity() {
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.player_preferences, rootKey)
+            findPreference<EditTextPreference>(C.PLAYER_BATTERY_OVERLAY_INTERVAL)?.apply {
+                summaryProvider = Preference.SummaryProvider<EditTextPreference> { preference ->
+                    val minutes = preference.text?.toIntOrNull()?.takeIf { it > 0 } ?: 5
+                    resources.getQuantityString(R.plurals.player_battery_overlay_interval_summary, minutes, minutes)
+                }
+                setOnPreferenceChangeListener { _, newValue ->
+                    val valid = newValue.toString().toIntOrNull()?.let { it > 0 } == true
+                    if (!valid) {
+                        Toast.makeText(requireContext(), R.string.player_battery_overlay_interval_invalid, Toast.LENGTH_SHORT).show()
+                    }
+                    valid
+                }
+                setOnBindEditTextListener {
+                    it.inputType = InputType.TYPE_CLASS_NUMBER
+                    it.setSelection(it.text.length)
+                }
+            }
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !requireActivity().packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) {
                 findPreference<SwitchPreferenceCompat>(C.PLAYER_BACKGROUND_AUDIO_PIP_CLOSED)?.isVisible = false
                 findPreference<SwitchPreferenceCompat>(C.PLAYER_BACKGROUND_AUDIO_PIP_LOCKED)?.isVisible = false
@@ -1327,17 +1343,10 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 true
             }
-            findPreference<EditTextPreference>("update_check_frequency")?.apply {
-                summary = getString(R.string.update_check_frequency_summary, text)
-                setOnPreferenceChangeListener { _, newValue ->
-                    summary = getString(R.string.update_check_frequency_summary, newValue)
-                    true
-                }
-            }
             findPreference<SwitchPreferenceCompat>("update_use_browser")?.setOnPreferenceChangeListener { _, newValue ->
                 if (Build.VERSION.SDK_INT == Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
                     newValue == false &&
-                    requireContext().prefs().getBoolean(C.UPDATE_CHECK_ENABLED, false) &&
+                    requireContext().prefs().getBoolean(C.UPDATE_CHECK_ENABLED, true) &&
                     !requireContext().packageManager.canRequestPackageInstalls()
                 ) {
                     try {

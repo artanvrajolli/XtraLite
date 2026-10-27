@@ -2,7 +2,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <EditTextPreference
-        android:defaultValue="https://api.github.com/repos/crackededed/xtra/releases/tags/latest"
+        android:defaultValue="https://api.github.com/repos/artanvrajolli/XtraLite/releases/latest"
         android:key="update_url"
         android:title="@string/update_url"
         app:iconSpaceReserved="false"
@@ -10,16 +10,10 @@
         app:useSimpleSummaryProvider="true" />
 
     <SwitchPreferenceCompat
-        android:defaultValue="false"
+        android:defaultValue="true"
         android:key="update_check_enabled"
         android:title="@string/auto_check_updates"
-        app:iconSpaceReserved="false"
-        app:singleLineTitle="false" />
-
-    <EditTextPreference
-        android:defaultValue="7"
-        android:key="update_check_frequency"
-        android:title="@string/update_check_frequency"
+        android:summary="@string/update_startup_summary"
         app:iconSpaceReserved="false"
         app:singleLineTitle="false" />
 

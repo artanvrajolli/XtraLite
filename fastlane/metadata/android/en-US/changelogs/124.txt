@@ -1,0 +1,3 @@
+* Update the base to Xtra 2.60.9
+* Improve German translations
+* Update build tools and libraries

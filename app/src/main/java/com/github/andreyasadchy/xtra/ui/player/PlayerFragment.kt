@@ -8,12 +8,14 @@ import android.app.PictureInPictureParams
 import android.app.RemoteAction
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.Icon
 import android.media.AudioManager
+import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
@@ -97,6 +99,7 @@ import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -141,6 +144,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
     private var swipeStartValue = 0f
     private val hideSwipeOverlay = Runnable { _binding?.swipeOverlay?.visibility = View.GONE }
     private var backgroundVisible = false
+    private var batteryOverlayJob: Job? = null
 
     private var castContext: CastContext? = null
     private val castSessionListener = object : SessionManagerListener<CastSession> {
@@ -1336,6 +1340,64 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                 }
             }
         }
+        updateBatteryOverlaySchedule()
+    }
+
+    private fun updateBatteryOverlaySchedule() {
+        stopBatteryOverlay()
+        if (!isResumed || isPortrait || !isMaximized || requireActivity().isInPictureInPictureMode) {
+            return
+        }
+        val preferences = requireContext().prefs()
+        if (!preferences.getBoolean(C.PLAYER_BATTERY_OVERLAY, true)) {
+            return
+        }
+        val intervalMinutes = preferences.getString(C.PLAYER_BATTERY_OVERLAY_INTERVAL, "5")
+            ?.toIntOrNull()?.takeIf { it > 0 } ?: 5
+        val intervalMillis = intervalMinutes * 60_000L
+        batteryOverlayJob = viewLifecycleOwner.lifecycleScope.launch {
+            delay(intervalMillis)
+            while (true) {
+                showBatteryStatus()
+                delay(BATTERY_OVERLAY_DURATION_MS)
+                binding.batteryOverlay.visibility = View.GONE
+                delay(intervalMillis - BATTERY_OVERLAY_DURATION_MS)
+            }
+        }
+    }
+
+    private fun showBatteryStatus() {
+        val battery = requireContext().registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) ?: return
+        if (!battery.getBooleanExtra(BatteryManager.EXTRA_PRESENT, true)) {
+            return
+        }
+        val level = battery.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+        val scale = battery.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+        if (level < 0 || scale <= 0) {
+            return
+        }
+        val percent = (level * 100f / scale).roundToInt().coerceIn(0, 100)
+        val state = when (battery.getIntExtra(BatteryManager.EXTRA_STATUS, BatteryManager.BATTERY_STATUS_UNKNOWN)) {
+            BatteryManager.BATTERY_STATUS_CHARGING -> R.string.battery_charging
+            BatteryManager.BATTERY_STATUS_FULL -> R.string.battery_full
+            BatteryManager.BATTERY_STATUS_NOT_CHARGING -> {
+                if (battery.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0) {
+                    R.string.battery_not_charging
+                } else {
+                    R.string.battery_discharging
+                }
+            }
+            BatteryManager.BATTERY_STATUS_DISCHARGING -> R.string.battery_discharging
+            else -> R.string.battery_status_unknown
+        }
+        binding.batteryOverlay.text = getString(R.string.player_battery_status, percent, getString(state))
+        binding.batteryOverlay.visibility = View.VISIBLE
+    }
+
+    private fun stopBatteryOverlay() {
+        batteryOverlayJob?.cancel()
+        batteryOverlayJob = null
+        _binding?.batteryOverlay?.visibility = View.GONE
     }
 
     private fun startSwipe(mode: Int, y: Float) {
@@ -1963,6 +2025,12 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
             binding.secondaryLayout.visibility = View.GONE
             useController = false
         }
+        updateBatteryOverlaySchedule()
+    }
+
+    override fun onPause() {
+        stopBatteryOverlay()
+        super.onPause()
     }
 
     override fun initialize() {
@@ -2019,6 +2087,11 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                 useController = true
             }
         }
+        if (isInPictureInPictureMode) {
+            stopBatteryOverlay()
+        } else {
+            updateBatteryOverlaySchedule()
+        }
     }
 
     override fun onStop() {
@@ -2031,6 +2104,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
         hideSwipeHint()
         with(binding) {
             isMaximized = false
+            stopBatteryOverlay()
             backPressedCallback.remove()
             useController = false
             hideController(true)
@@ -2097,6 +2171,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
     fun maximize() {
         with(binding) {
             isMaximized = true
+            updateBatteryOverlaySchedule()
             requireActivity().onBackPressedDispatcher.addCallback(this@PlayerFragment, backPressedCallback)
             useController = true
             if (!controllerHideOnTouch) {
@@ -2371,6 +2446,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
     }
 
     override fun onDestroyView() {
+        stopBatteryOverlay()
         super.onDestroyView()
         resetBrightness()
         castContext?.sessionManager?.removeSessionManagerListener(castSessionListener, CastSession::class.java)
@@ -2379,6 +2455,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
     }
 
     companion object {
+        private const val BATTERY_OVERLAY_DURATION_MS = 5_000L
         private const val REQUEST_CODE_QUALITY = 0
         private const val SWIPE_NONE = 0
         private const val SWIPE_BRIGHTNESS = 1

@@ -11,6 +11,23 @@
 
     <SwitchPreferenceCompat
         android:defaultValue="true"
+        android:key="player_battery_overlay"
+        android:summary="@string/player_battery_overlay_summary"
+        android:title="@string/player_battery_overlay"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
+    <EditTextPreference
+        android:defaultValue="5"
+        android:dependency="player_battery_overlay"
+        android:dialogMessage="@string/player_battery_overlay_interval_message"
+        android:key="player_battery_overlay_interval"
+        android:title="@string/player_battery_overlay_interval"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
         android:key="player_disable_background_video"
         android:title="@string/disable_background_video"
         app:iconSpaceReserved="false"
