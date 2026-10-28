@@ -92,6 +92,7 @@ import com.github.andreyasadchy.xtra.ui.saved.downloads.DownloadsFragment
 import com.github.andreyasadchy.xtra.ui.team.TeamFragmentDirections
 import com.github.andreyasadchy.xtra.ui.top.TopStreamsFragmentDirections
 import com.github.andreyasadchy.xtra.util.BrowseChrome
+import com.github.andreyasadchy.xtra.util.BrowseInsets
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.CastManager
 import com.github.andreyasadchy.xtra.util.ReleaseUpdate
@@ -175,6 +176,8 @@ class MainActivity : AppCompatActivity() {
         applyTheme()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        val ignoreCutouts = prefs.getBoolean(C.UI_DRAW_BEHIND_CUTOUTS, false)
+        BrowseInsets.install(binding.navHostFragment, ignoreCutouts)
         supportFragmentManager.registerFragmentLifecycleCallbacks(object : FragmentManager.FragmentLifecycleCallbacks() {
             override fun onFragmentViewCreated(fm: FragmentManager, f: Fragment, v: View, savedInstanceState: Bundle?) {
                 BrowseChrome.update(v)
@@ -184,7 +187,6 @@ class MainActivity : AppCompatActivity() {
         binding.updateButton.setOnClickListener { startAvailableUpdate() }
         setUpCast()
         setNavBarColor(resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT)
-        val ignoreCutouts = prefs.getBoolean(C.UI_DRAW_BEHIND_CUTOUTS, false)
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, windowInsets ->
             val insets = if (ignoreCutouts) {
                 windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())

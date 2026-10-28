@@ -7,7 +7,6 @@ import android.widget.TextView
 import androidx.appcompat.widget.ActionMenuView
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnLayout
 import com.github.andreyasadchy.xtra.R
 import com.google.android.material.appbar.AppBarLayout
@@ -68,14 +67,7 @@ internal class SingleRowBrowseHeader private constructor(private val appBar: App
             appBar.addView(row, positions.first().index, AppBarLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, row.rowHeight
             ).apply { scrollFlags = AppBarLayout.LayoutParams.SCROLL_FLAG_SCROLL or AppBarLayout.LayoutParams.SCROLL_FLAG_ENTER_ALWAYS })
-            // The old toolbar's inset listener can still set its margins. HeaderRow ignores
-            // those margins; the shared row owns the system-bar inset instead.
-            ViewCompat.setOnApplyWindowInsetsListener(row) { _, insets ->
-                val top = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()).top
-                val params = row.layoutParams as ViewGroup.MarginLayoutParams
-                if (params.topMargin != top) row.layoutParams = params.apply { topMargin = top }
-                insets
-            }
+            // BrowseInsets reserves the top safe area outside this scrolling app bar.
         }
         appBar.setExpanded(true, false)
         ViewCompat.requestApplyInsets(appBar)

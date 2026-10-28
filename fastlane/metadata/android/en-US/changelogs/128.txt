@@ -1,0 +1,4 @@
+* Keep the compact browsing header below Android's status bar
+* Respect display cutouts and caption bars without adding duplicate top space
+* Keep the status-bar safe area outside scrolling headers
+* Preserve fullscreen playback's edge-to-edge layout

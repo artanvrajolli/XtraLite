@@ -4,12 +4,17 @@ import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Rect
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.widget.Toolbar
+import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.navigation.fragment.NavHostFragment
 import com.github.andreyasadchy.xtra.R
 import com.github.andreyasadchy.xtra.ui.main.MainActivity
 import com.google.android.material.appbar.AppBarLayout
@@ -101,7 +106,8 @@ class BrowseHeaderInstrumentation : Instrumentation() {
                     host.resources.updateConfiguration(original, host.resources.displayMetrics)
                 }
             }
-            result.putString("stream", "Passed $count header scenarios, including repeated rotation and late toolbar resizing.\n")
+            val insetCount = verifyBrowsingInsets(host as MainActivity)
+            result.putString("stream", "Passed $count header scenarios and $insetCount status-bar/cutout scenarios.\n")
             runOnMainSync { host.finish() }
             finish(Activity.RESULT_OK, result)
         } catch (error: Throwable) {
@@ -109,5 +115,70 @@ class BrowseHeaderInstrumentation : Instrumentation() {
             activity?.let { runOnMainSync { it.finish() } }
             finish(Activity.RESULT_CANCELED, result)
         }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun verifyBrowsingInsets(host: MainActivity): Int {
+        var count = 0
+        val original = Configuration(host.resources.configuration)
+        val density = host.resources.displayMetrics.density
+        fun dp(value: Int) = (value * density).roundToInt()
+        data class Case(val status: Int, val cutout: Int = 0, val caption: Int = 0)
+        try {
+            for (destination in listOf(R.id.rootGamesFragment, R.id.channelPagerFragment)) {
+                runOnMainSync {
+                    val nav = host.supportFragmentManager.findFragmentById(R.id.navHostFragment) as NavHostFragment
+                    nav.navController.navigate(destination, Bundle().apply { putString("channelLogin", "twitch") })
+                    nav.childFragmentManager.executePendingTransactions()
+                }
+                waitForIdleSync()
+                runOnMainSync {
+                    val root = (host.findViewById<ViewGroup>(android.R.id.content)).getChildAt(0) as ViewGroup
+                    val navHost = host.findViewById<View>(R.id.navHostFragment)
+                    val player = host.findViewById<View>(R.id.playerContainer)
+                    for (orientation in listOf(Configuration.ORIENTATION_LANDSCAPE, Configuration.ORIENTATION_PORTRAIT)) {
+                        host.resources.updateConfiguration(Configuration(original).apply { this.orientation = orientation }, host.resources.displayMetrics)
+                        BrowseChrome.update(root)
+                        for (case in listOf(Case(24), Case(0), Case(24, cutout = 48), Case(0, caption = 32))) {
+                            val insets = WindowInsetsCompat.Builder()
+                                .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, dp(case.status), 0, 0))
+                                .setInsetsIgnoringVisibility(WindowInsetsCompat.Type.statusBars(), Insets.of(0, dp(24), 0, 0))
+                                .setVisible(WindowInsetsCompat.Type.statusBars(), case.status > 0)
+                                .setInsets(WindowInsetsCompat.Type.displayCutout(), Insets.of(0, dp(case.cutout), 0, 0))
+                                .setInsetsIgnoringVisibility(WindowInsetsCompat.Type.displayCutout(), Insets.of(0, dp(case.cutout), 0, 0))
+                                .setVisible(WindowInsetsCompat.Type.displayCutout(), case.cutout > 0)
+                                .setInsets(WindowInsetsCompat.Type.captionBar(), Insets.of(0, dp(case.caption), 0, 0))
+                                .setInsetsIgnoringVisibility(WindowInsetsCompat.Type.captionBar(), Insets.of(0, dp(case.caption), 0, 0))
+                                .setVisible(WindowInsetsCompat.Type.captionBar(), case.caption > 0)
+                                .setInsets(WindowInsetsCompat.Type.navigationBars(), Insets.of(0, 0, 0, dp(16)))
+                                .setInsetsIgnoringVisibility(WindowInsetsCompat.Type.navigationBars(), Insets.of(0, 0, 0, dp(16)))
+                                .setVisible(WindowInsetsCompat.Type.navigationBars(), true)
+                                .build()
+                            ViewCompat.dispatchApplyWindowInsets(root, insets)
+                            val width = dp(if (orientation == Configuration.ORIENTATION_LANDSCAPE) 900 else 400)
+                            val height = dp(if (orientation == Configuration.ORIENTATION_LANDSCAPE) 400 else 900)
+                            root.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+                            root.layout(0, 0, width, height)
+                            val expected = dp(maxOf(case.status, case.cutout, case.caption))
+                            check(navHost.top == expected) { "Browser top ${navHost.top}, expected $expected; $case" }
+                            val toolbar = navHost.findViewById<Toolbar>(R.id.toolbar)
+                            val bounds = Rect()
+                            toolbar.getDrawingRect(bounds)
+                            root.offsetDescendantRectToMyCoords(toolbar, bounds)
+                            check(bounds.top == expected) { "Toolbar top ${bounds.top}, expected $expected; $case, orientation $orientation, destination $destination" }
+                            check(player.top == 0 && player.height == height) { "Player was inset with the browser" }
+                            if (orientation == Configuration.ORIENTATION_LANDSCAPE) check(toolbar.height == dp(48))
+                            count++
+                        }
+                    }
+                }
+            }
+        } finally {
+            runOnMainSync {
+                host.resources.updateConfiguration(original, host.resources.displayMetrics)
+                BrowseChrome.update((host.findViewById<ViewGroup>(android.R.id.content)).getChildAt(0))
+            }
+        }
+        return count
     }
 }
