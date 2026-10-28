@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.Toolbar
 import com.github.andreyasadchy.xtra.R
+import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.navigation.NavigationBarView
 import com.google.android.material.tabs.TabLayout
@@ -21,6 +22,7 @@ object BrowseChrome {
     }
 
     private fun update(view: View, landscape: Boolean) {
+        if (view is AppBarLayout && !landscape) SingleRowBrowseHeader.update(view, false)
         val heightDp = when (view) {
             is Toolbar, is BottomNavigationView -> 48
             is TabLayout -> 42
@@ -51,5 +53,6 @@ object BrowseChrome {
         if (view is ViewGroup) {
             for (index in 0 until view.childCount) update(view.getChildAt(index), landscape)
         }
+        if (view is AppBarLayout && landscape) SingleRowBrowseHeader.update(view, true)
     }
 }

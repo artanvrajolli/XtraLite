@@ -27,8 +27,9 @@ android {
         applicationId = "com.github.artanvrajolli.xtralite"
         minSdk = 24
         targetSdk = 37
-        versionCode = 126
-        versionName = "2.60.9-lite.3"
+        versionCode = 127
+        versionName = "2.60.9-lite.4"
+        testInstrumentationRunner = "com.github.andreyasadchy.xtra.util.BrowseHeaderInstrumentation"
     }
 
     buildTypes {

@@ -1,0 +1,4 @@
+* Combine landscape browsing tabs, Sort, and toolbar actions into one 48dp row
+* Remove the expanded channel/game header space in landscape
+* Fix channel tab loading overriding the compact toolbar height
+* Restore the full header and sorting summary in portrait

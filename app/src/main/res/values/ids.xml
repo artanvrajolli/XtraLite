@@ -2,4 +2,5 @@
 <resources>
     <item name="browse_chrome_size" type="id" />
     <item name="browse_chrome_navigation" type="id" />
+    <item name="browse_single_row_header" type="id" />
 </resources>
