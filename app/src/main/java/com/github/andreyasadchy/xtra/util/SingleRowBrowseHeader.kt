@@ -42,6 +42,12 @@ internal class SingleRowBrowseHeader private constructor(private val appBar: App
     private val row = HeaderRow(appBar.context, toolbar, tabs, sort)
 
     private fun attach() {
+        // CollapsingToolbarLayout caches its toolbar on first measure. Without that cache it
+        // draws its content scrim over every child, hiding the row on pages opened in landscape.
+        collapsing?.measure(
+            View.MeasureSpec.makeMeasureSpec(appBar.resources.displayMetrics.widthPixels, View.MeasureSpec.AT_MOST),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
         positions.forEach { it.parent.removeView(it.view) }
         row.addView(toolbar, CollapsingToolbarLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, row.rowHeight))
         tabs?.let {

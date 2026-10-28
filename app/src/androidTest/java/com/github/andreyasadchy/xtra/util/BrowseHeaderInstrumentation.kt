@@ -66,7 +66,7 @@ class BrowseHeaderInstrumentation : Instrumentation() {
                                 root.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
                                 root.layout(0, 0, width, height)
                             }
-                            measure() // Populate CollapsingToolbarLayout's cached toolbar before moving it.
+                            // No measure here: fragments opened in landscape attach the row before their first layout.
                             repeat(3) {
                                 host.resources.updateConfiguration(Configuration(original).apply { orientation = Configuration.ORIENTATION_LANDSCAPE }, host.resources.displayMetrics)
                                 BrowseChrome.update(root)
@@ -78,6 +78,11 @@ class BrowseHeaderInstrumentation : Instrumentation() {
                                 check(appBar.measuredHeight == rowHeight) { "Header has ${appBar.measuredHeight}px, expected $rowHeight (layout $layout)" }
                                 check(toolbar.measuredHeight == rowHeight)
                                 check(root.findViewById<CollapsingToolbarLayout?>(R.id.collapsingToolbar)?.isTitleEnabled != true)
+                                root.findViewById<CollapsingToolbarLayout?>(R.id.collapsingToolbar)?.let {
+                                    // A missing cached toolbar makes the content scrim cover the whole row.
+                                    val cached = CollapsingToolbarLayout::class.java.getDeclaredField("toolbar").apply { isAccessible = true }.get(it)
+                                    check(cached == toolbar) { "Collapsing toolbar scrim would hide the row (layout $layout)" }
+                                }
                                 check(toolbar.parent == sort.parent && (tabs == null || tabs.parent == toolbar.parent))
                                 check(tabs == null || tabs.top == toolbar.top && tabs.measuredHeight == rowHeight)
                                 check(sort.top == toolbar.top && sort.measuredWidth == rowHeight)

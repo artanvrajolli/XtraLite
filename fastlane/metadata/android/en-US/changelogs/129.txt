@@ -1,0 +1,2 @@
+* Show the compact header controls on channel and game pages opened in landscape
+* Keep the toolbar, tabs, and sort button visible instead of an empty grey bar
