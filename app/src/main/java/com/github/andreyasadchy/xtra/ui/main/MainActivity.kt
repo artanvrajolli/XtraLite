@@ -91,6 +91,7 @@ import com.github.andreyasadchy.xtra.ui.saved.SavedPagerFragment
 import com.github.andreyasadchy.xtra.ui.saved.downloads.DownloadsFragment
 import com.github.andreyasadchy.xtra.ui.team.TeamFragmentDirections
 import com.github.andreyasadchy.xtra.ui.top.TopStreamsFragmentDirections
+import com.github.andreyasadchy.xtra.util.BrowseChrome
 import com.github.andreyasadchy.xtra.util.C
 import com.github.andreyasadchy.xtra.util.CastManager
 import com.github.andreyasadchy.xtra.util.ReleaseUpdate
@@ -174,6 +175,12 @@ class MainActivity : AppCompatActivity() {
         applyTheme()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        supportFragmentManager.registerFragmentLifecycleCallbacks(object : FragmentManager.FragmentLifecycleCallbacks() {
+            override fun onFragmentViewCreated(fm: FragmentManager, f: Fragment, v: View, savedInstanceState: Bundle?) {
+                BrowseChrome.update(v)
+            }
+        }, true)
+        BrowseChrome.update(binding.root)
         binding.updateButton.setOnClickListener { startAvailableUpdate() }
         setUpCast()
         setNavBarColor(resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT)
@@ -607,6 +614,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        BrowseChrome.update(binding.root)
         setNavBarColor(newConfig.orientation == Configuration.ORIENTATION_PORTRAIT)
     }
 

@@ -27,8 +27,8 @@ android {
         applicationId = "com.github.artanvrajolli.xtralite"
         minSdk = 24
         targetSdk = 37
-        versionCode = 125
-        versionName = "2.60.9-lite.2"
+        versionCode = 126
+        versionName = "2.60.9-lite.3"
     }
 
     buildTypes {

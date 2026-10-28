@@ -1,0 +1,4 @@
+* Show more content in landscape with smaller headers and tab rows
+* Use compact, icons-only bottom navigation in landscape
+* Restore normal navigation and header sizes when rotating to portrait
+* Apply the layout without restarting playback
