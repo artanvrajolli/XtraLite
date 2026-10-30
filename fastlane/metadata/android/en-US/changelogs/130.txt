@@ -1,0 +1,2 @@
+* Option to start the sleep timer automatically for every video with your last duration
+* Short sleep timer reminder at the top of the player at 10, 5, 4, 3, 2 and 1 minutes left; tap it to change the timer

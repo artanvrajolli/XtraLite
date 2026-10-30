@@ -51,9 +51,11 @@ class SleepTimerDialog : DialogFragment() {
                 (parentFragment as? PlayerFragment)?.onSleepTimerChanged(hours.value * 3600_000L + minutes.value * 60_000L,  hours.value, minutes.value, lockCheckbox.isChecked)
                 requireContext().prefs().edit {
                     putInt(C.SLEEP_TIMER_MINUTES, hours.value * 60 + minutes.value)
+                    putBoolean(C.SLEEP_TIMER_AUTO_START, autoStartCheckbox.isChecked)
                 }
                 dismiss()
             }
+            autoStartCheckbox.isChecked = requireContext().prefs().getBoolean(C.SLEEP_TIMER_AUTO_START, false)
             val timeLeft = requireArguments().getLong(KEY_TIME_LEFT)
             if (timeLeft < 0L) {
                 val savedValue = requireContext().prefs().getInt(C.SLEEP_TIMER_MINUTES, 15)
@@ -68,6 +70,7 @@ class SleepTimerDialog : DialogFragment() {
                 builder.setPositiveButton(getString(R.string.set), positiveListener)
                 builder.setNegativeButton(getString(R.string.stop)) { _, _ ->
                     (parentFragment as? PlayerFragment)?.onSleepTimerChanged(-1L, 0, 0, lockCheckbox.isChecked)
+                    requireContext().prefs().edit { putBoolean(C.SLEEP_TIMER_AUTO_START, autoStartCheckbox.isChecked) }
                     dismiss()
                 }
                 builder.setNeutralButton(android.R.string.cancel) { _, _ -> dismiss() }

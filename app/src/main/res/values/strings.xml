@@ -643,4 +643,9 @@
     <string name="update_startup_summary">Check for a newer release when the app starts</string>
     <string name="update_failed">Could not update Xtra Lite. Please try again.</string>
     <string name="update_install_permission">Allow Xtra Lite to install apps in Android settings, then tap Update again.</string>
+    <string name="sleep_timer_auto_start">Start automatically for every video</string>
+    <string name="sleep_timer_auto_start_summary">Uses the last sleep timer duration whenever a video starts</string>
+    <string name="sleep_timer_short_minutes">%d min</string>
+    <string name="sleep_timer_short_hours">%d h</string>
+    <string name="sleep_timer_short_hours_minutes">%1$d h %2$d min</string>
 </resources>

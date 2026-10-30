@@ -143,6 +143,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
     private var swipeStartY = 0f
     private var swipeStartValue = 0f
     private val hideSwipeOverlay = Runnable { _binding?.swipeOverlay?.visibility = View.GONE }
+    private val hideSleepTimerOverlay = Runnable { _binding?.sleepTimerOverlay?.visibility = View.GONE }
     private var backgroundVisible = false
     private var batteryOverlayJob: Job? = null
 
@@ -224,6 +225,29 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     viewModel.integrity.collect {
                         (requireActivity() as? MainActivity)?.getNewIntegrityToken(it, childFragmentManager)
+                    }
+                }
+            }
+            sleepTimerOverlay.setOnClickListener {
+                hideSleepTimerOverlay.run()
+                showSleepTimerDialog()
+            }
+            if (savedInstanceState == null) {
+                startSavedSleepTimer()
+            }
+            viewLifecycleOwner.lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    var previousTimeLeft = (activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0
+                    while (true) {
+                        delay(1000)
+                        val timeLeft = (activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0
+                        // only on a normal countdown tick, not when the timer was just started or changed
+                        if (timeLeft > 0L && previousTimeLeft - timeLeft in 0L..5_000L) {
+                            SLEEP_TIMER_WARNING_MINUTES.lastOrNull { previousTimeLeft > it * 60_000L && timeLeft <= it * 60_000L }?.let {
+                                showSleepTimerOverlay(it)
+                            }
+                        }
+                        previousTimeLeft = timeLeft
                     }
                 }
             }
@@ -1367,6 +1391,9 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
     }
 
     private fun showBatteryStatus() {
+        if (binding.sleepTimerOverlay.isVisible) {
+            return
+        }
         val battery = requireContext().registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) ?: return
         if (!battery.getBooleanExtra(BatteryManager.EXTRA_PRESENT, true)) {
             return
@@ -1503,12 +1530,43 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
                     onSleepTimerChanged(minutes * 60_000L, minutes / 60, minutes % 60, requireContext().prefs().getBoolean(C.SLEEP_TIMER_LOCK, false))
                     requireContext().prefs().edit {
                         putInt(C.SLEEP_TIMER_TIME, picker.hour * 60 + picker.minute)
+                        putInt(C.SLEEP_TIMER_MINUTES, minutes)
                     }
                 }
                 picker.show(childFragmentManager, null)
             }
         } else {
             SleepTimerDialog.newInstance((activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0).show(childFragmentManager, null)
+        }
+    }
+
+    private fun startSavedSleepTimer() {
+        val prefs = requireContext().prefs()
+        if (!prefs.getBoolean(C.SLEEP_TIMER_AUTO_START, false) || ((activity as? MainActivity)?.getSleepTimerTimeLeft() ?: 0) > 0L) {
+            return
+        }
+        val minutes = prefs.getInt(C.SLEEP_TIMER_MINUTES, 15)
+        if (minutes > 0) {
+            (activity as? MainActivity)?.setSleepTimer(minutes * 60_000L)
+            showSleepTimerOverlay(minutes)
+        }
+    }
+
+    private fun showSleepTimerOverlay(minutes: Int) {
+        if (!isMaximized || requireActivity().isInPictureInPictureMode) {
+            return
+        }
+        with(binding) {
+            sleepTimerOverlayText.text = when {
+                minutes < 60 -> getString(R.string.sleep_timer_short_minutes, minutes)
+                minutes % 60 == 0 -> getString(R.string.sleep_timer_short_hours, minutes / 60)
+                else -> getString(R.string.sleep_timer_short_hours_minutes, minutes / 60, minutes % 60)
+            }
+            // shares the top center spot with the battery status
+            batteryOverlay.visibility = View.GONE
+            sleepTimerOverlay.visibility = View.VISIBLE
+            sleepTimerOverlay.removeCallbacks(hideSleepTimerOverlay)
+            sleepTimerOverlay.postDelayed(hideSleepTimerOverlay, SLEEP_TIMER_OVERLAY_DURATION_MS)
         }
     }
 
@@ -2089,6 +2147,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
         }
         if (isInPictureInPictureMode) {
             stopBatteryOverlay()
+            hideSleepTimerOverlay.run()
         } else {
             updateBatteryOverlaySchedule()
         }
@@ -2105,6 +2164,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
         with(binding) {
             isMaximized = false
             stopBatteryOverlay()
+            hideSleepTimerOverlay.run()
             backPressedCallback.remove()
             useController = false
             hideController(true)
@@ -2447,6 +2507,7 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
 
     override fun onDestroyView() {
         stopBatteryOverlay()
+        binding.sleepTimerOverlay.removeCallbacks(hideSleepTimerOverlay)
         super.onDestroyView()
         resetBrightness()
         castContext?.sessionManager?.removeSessionManagerListener(castSessionListener, CastSession::class.java)
@@ -2456,6 +2517,8 @@ abstract class PlayerFragment : BaseNetworkFragment(), RadioButtonDialogFragment
 
     companion object {
         private const val BATTERY_OVERLAY_DURATION_MS = 5_000L
+        private const val SLEEP_TIMER_OVERLAY_DURATION_MS = 5_000L
+        private val SLEEP_TIMER_WARNING_MINUTES = listOf(10, 5, 4, 3, 2, 1)
         private const val REQUEST_CODE_QUALITY = 0
         private const val SWIPE_NONE = 0
         private const val SWIPE_BRIGHTNESS = 1

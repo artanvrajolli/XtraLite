@@ -57,6 +57,7 @@ object C {
     const val SLEEP_TIMER_TIME = "sleep_timer_time"
     const val SLEEP_TIMER_LOCK = "sleep_timer_lock"
     const val SLEEP_TIMER_USE_TIME_PICKER = "sleep_timer_use_time_picker"
+    const val SLEEP_TIMER_AUTO_START = "sleep_timer_auto_start"
     const val SORT_DEFAULT_GAME_VIDEOS = "sort_default_game_videos"
     const val SORT_DEFAULT_GAME_CLIPS = "sort_default_game_clips"
     const val SORT_DEFAULT_CHANNEL_VIDEOS = "sort_default_channel_videos"

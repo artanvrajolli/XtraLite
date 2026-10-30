@@ -31,6 +31,14 @@
 
     <SwitchPreferenceCompat
         android:defaultValue="false"
+        android:key="sleep_timer_auto_start"
+        android:summary="@string/sleep_timer_auto_start_summary"
+        android:title="@string/sleep_timer_auto_start"
+        app:iconSpaceReserved="false"
+        app:singleLineTitle="false" />
+
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
         android:key="sleep_timer_use_time_picker"
         android:title="@string/sleep_timer_time_picker"
         app:iconSpaceReserved="false"
