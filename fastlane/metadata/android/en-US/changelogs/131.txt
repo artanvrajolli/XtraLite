@@ -1,0 +1,3 @@
+* Based on Xtra 2.60.10
+* Fixed a crash during stream downloads
+* Fixed errors caused by download progress updates

@@ -280,7 +280,10 @@ class XtraModule(application: Application) {
                 Migration(40, 41) { db ->
                     db.execSQL("DROP TABLE IF EXISTS recent_emotes")
                     db.execSQL("DROP TABLE IF EXISTS translate_all_messages")
-                }
+                },
+                Migration(41, 42) { db ->
+                    db.execSQL("UPDATE videos SET lastSegmentUrl = NULL")
+                },
             )
         }.build()
     }

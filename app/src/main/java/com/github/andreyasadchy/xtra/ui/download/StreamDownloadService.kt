@@ -949,7 +949,7 @@ class StreamDownloadService : LifecycleService() {
                                 it.write(response.body)
                             }
                             downloadProgress.bytes += response.body.size
-                            downloadProgress.lastSegmentUrl += lastUrl
+                            downloadProgress.lastSegmentUrl = lastUrl
                         }
                     }
                     networkLibrary == C.CRONET && xtraModule.cronetEngine.value != null -> {
@@ -981,7 +981,7 @@ class StreamDownloadService : LifecycleService() {
                                 it.write(response.body)
                             }
                             downloadProgress.bytes += response.body.size
-                            downloadProgress.lastSegmentUrl += lastUrl
+                            downloadProgress.lastSegmentUrl = lastUrl
                         }
                     }
                     else -> {
@@ -1001,7 +1001,7 @@ class StreamDownloadService : LifecycleService() {
                                         inputStream.copyTo(outputStream)
                                     }
                                     downloadProgress.bytes += response.body.contentLength()
-                                    downloadProgress.lastSegmentUrl += lastUrl
+                                    downloadProgress.lastSegmentUrl = lastUrl
                                 }
                             }
                         }
@@ -1122,7 +1122,7 @@ class StreamDownloadService : LifecycleService() {
                                         it.write(response.body)
                                     }
                                     downloadProgress.bytes += response.body.size
-                                    downloadProgress.lastSegmentUrl += lastUrl
+                                    downloadProgress.lastSegmentUrl = lastUrl
                                 }
                             }
                             networkLibrary == C.CRONET && xtraModule.cronetEngine.value != null -> {
@@ -1154,7 +1154,7 @@ class StreamDownloadService : LifecycleService() {
                                         it.write(response.body)
                                     }
                                     downloadProgress.bytes += response.body.size
-                                    downloadProgress.lastSegmentUrl += lastUrl
+                                    downloadProgress.lastSegmentUrl = lastUrl
                                 }
                             }
                             else -> {
@@ -1174,7 +1174,7 @@ class StreamDownloadService : LifecycleService() {
                                                 inputStream.copyTo(outputStream)
                                             }
                                             downloadProgress.bytes += response.body.contentLength()
-                                            downloadProgress.lastSegmentUrl += lastUrl
+                                            downloadProgress.lastSegmentUrl = lastUrl
                                         }
                                     }
                                 }

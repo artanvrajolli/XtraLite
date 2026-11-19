@@ -4,7 +4,7 @@
 
 Xtra Lite is a lightweight Twitch player and browser for Android, based on [Xtra](https://github.com/crackededed/Xtra).
 
-Upstream base: Xtra 2.60.9 ([`0444de81`](https://github.com/crackededed/Xtra/commit/0444de816e28de1654979a5a2a663b3fc51cb6a6)).
+Upstream base: Xtra 2.60.10 ([`0ab697de`](https://github.com/crackededed/Xtra/commit/0ab697de04799365f590f91e2dfbefc092c3ad5a)).
 
 </br>
 </br>

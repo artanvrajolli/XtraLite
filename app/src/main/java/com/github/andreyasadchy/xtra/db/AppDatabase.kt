@@ -38,7 +38,7 @@ import com.github.andreyasadchy.xtra.model.ui.VideoSwap
         StreamProxy::class,
         VideoSwap::class,
     ],
-    version = 41,
+    version = 42,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
